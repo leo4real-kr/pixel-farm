@@ -67,7 +67,8 @@ function preloadImages(callback) {
         { key: 'sweetpotato_4', src: 'images/sweetpotato_4.png', obj: cropImages },
         { key: 'sweetpotato_5', src: 'images/sweetpotato_5.png', obj: cropImages },
         { key: 'overlay_weed',   src: 'images/overlay_weed.png',   obj: cropImages },
-        { key: 'overlay_rotten', src: 'images/overlay_rotten.png', obj: cropImages },    ];
+        { key: 'overlay_rotten', src: 'images/overlay_rotten.png', obj: cropImages },
+        { key: 'overlay_pest',   src: 'images/overlay_pest.png',   obj: cropImages },    ];
     let loaded = 0;
     let failed = 0;
     assets.forEach(item => {
@@ -254,12 +255,19 @@ function drawGame() {
                 }
             }
 
-            // 병충해 — 주황색 X
+            // 병충해 오버레이
             if (tile.hasPest && tile.type > 0) {
-                ctx.strokeStyle = '#FF6D00'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(cx+4, cy+4); ctx.lineTo(cx+tileSz-4, cy+tileSz-4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(cx+tileSz-4, cy+4); ctx.lineTo(cx+4, cy+tileSz-4); ctx.stroke();
-                ctx.lineWidth = 1;
+                const pestImg = cropImages['overlay_pest'];
+                if (pestImg) {
+                    ctx.globalAlpha = 0.85;
+                    ctx.drawImage(pestImg, cx, cy, tileSz, tileSz);
+                    ctx.globalAlpha = 1.0;
+                } else {
+                    ctx.strokeStyle = '#FF6D00'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(cx+4, cy+4); ctx.lineTo(cx+tileSz-4, cy+tileSz-4); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(cx+tileSz-4, cy+4); ctx.lineTo(cx+4, cy+tileSz-4); ctx.stroke();
+                    ctx.lineWidth = 1;
+                }
             }
 
             ctx.strokeStyle = '#5c3a1a'; ctx.strokeRect(cx, cy, tileSz, tileSz);
