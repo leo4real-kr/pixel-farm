@@ -313,9 +313,9 @@ canvas {
     .hud-item { font-size: 11px; }
 
     #canvas-container {
-        height: 55vw;
-        min-height: 260px;
-        max-height: 420px;
+        height: 75vw;
+        min-height: 300px;
+        max-height: 520px;
     }
 
     /* 캔버스 자동 스케일 */

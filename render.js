@@ -150,7 +150,7 @@ function playSound(type) {
 }
 
 // ── 모바일 뷰포트 ─────────────────────────────────────
-const MOBILE_VIEW = 13; // 모바일에서 보여줄 칸 수 (13×13)
+const MOBILE_VIEW = 9; // 모바일에서 보여줄 칸 수 (9×9)
 let viewOffsetX = 0;    // 뷰포트 시작 X
 let viewOffsetY = 0;    // 뷰포트 시작 Y
 let isMobile = false;
@@ -163,7 +163,7 @@ checkMobile();
 
 function resizeCanvas() {
     if (isMobile) {
-        const size = Math.min(window.innerWidth - 16, 480);
+        const size = Math.min(window.innerWidth - 8, 520);
         canvas.style.width  = size + 'px';
         canvas.style.height = size + 'px';
     } else {
