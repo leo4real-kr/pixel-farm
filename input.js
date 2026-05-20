@@ -47,11 +47,19 @@ function selectTool(toolType) {
     updateFamilyUI();
 }
 
+// ── 캔버스 좌표 계산 (스케일 보정 포함) ──────────────
+function getCanvasTile(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const tileX = Math.floor((clientX - rect.left) * scaleX / TILE_SIZE);
+    const tileY = Math.floor((clientY - rect.top)  * scaleY / TILE_SIZE);
+    return { tileX, tileY };
+}
+
 // ── 캔버스 클릭 ──────────────────────────────────────
 canvas.addEventListener('click', function(event) {
-    const rect = canvas.getBoundingClientRect();
-    const tileX = Math.floor((event.clientX - rect.left) / TILE_SIZE);
-    const tileY = Math.floor((event.clientY - rect.top) / TILE_SIZE);
+    const { tileX, tileY } = getCanvasTile(event.clientX, event.clientY);
     if (tileX < 0 || tileX >= GRID_SIZE || tileY < 0 || tileY >= GRID_SIZE) return;
 
     const tile = farmGrid[tileX][tileY];
@@ -335,3 +343,16 @@ function buyAreaTool(key) {
     addSysLog(`🛒 ${shop.label} 구매 완료! 내구도 ${shop.maxDur}회.`);
     renderToolShop();
 }
+
+// ── 터치 이벤트 (모바일) ────────────────────────────
+canvas.addEventListener('touchstart', function(event) {
+    event.preventDefault();
+    const touch = event.changedTouches[0];
+    const { tileX, tileY } = getCanvasTile(touch.clientX, touch.clientY);
+    if (tileX < 0 || tileX >= GRID_SIZE || tileY < 0 || tileY >= GRID_SIZE) return;
+    canvas.dispatchEvent(new MouseEvent('click', {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        bubbles: true
+    }));
+}, { passive: false });
