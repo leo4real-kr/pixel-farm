@@ -188,6 +188,7 @@ function tick() {
 
     // 9. 지출 계산
     const { baseLiving, finalChildCost, adultChildCount } = calculateDailyCost(spouseSkillCut);
+    processMortgage();
     const expEl = document.getElementById('expense-warning');
 
     if (fullUnlockDay === -1 && dynastyStartDay === -1) {
@@ -196,6 +197,8 @@ function tick() {
             expEl.innerText += ` | 자녀 양육비: -$${finalChildCost}`;
         if (adultChildCount > 0)
             expEl.innerText += ` | 청년 ${adultChildCount}명 생활비 분담 중`;
+        if (mortgageActive)
+            expEl.innerText += ` | 🏠 담보 상환 ${mortgageDaysLeft}일 남음`;
     }
 
     updateFinancials('지출', baseLiving, `${currentSeason} 가계 소비액`);
@@ -236,6 +239,7 @@ function resetGame(forceReset = false) {
 
     money = 1000; totalRevenue = 0; totalExpense = 0; fixedLoanAmount = 0;
     gameDays = 1; absoluteDays = 1; fullUnlockDay = -1; dynastyStartDay = -1;
+    mortgageActive = false; mortgageDaysLeft = 120; mortgageAmount = 0;
     generation = 1; endingFired = false;
     currentSeason = '봄'; currentWeather = '맑음'; currentTool = 'select';
     hasSpouse = false; spouseName = ''; spouseGrade = 'C';

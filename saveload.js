@@ -10,6 +10,7 @@ function buildSaveData() {
         savedAt:       new Date().toLocaleString('ko-KR'),
         // 기본 상태
         money, gameDays, absoluteDays, fullUnlockDay, dynastyStartDay,
+        mortgageActive, mortgageDaysLeft, mortgageAmount,
         currentSeason, currentWeather,
         totalRevenue, totalExpense, fixedLoanAmount,
         endingFired,
@@ -52,6 +53,9 @@ function applySaveData(d) {
     absoluteDays   = d.absoluteDays;
     fullUnlockDay  = d.fullUnlockDay;
     dynastyStartDay = d.dynastyStartDay ?? -1;
+    mortgageActive   = d.mortgageActive   ?? false;
+    mortgageDaysLeft = d.mortgageDaysLeft ?? 120;
+    mortgageAmount   = d.mortgageAmount   ?? 0;
     currentSeason  = d.currentSeason;
     currentWeather = d.currentWeather;
     totalRevenue   = d.totalRevenue;

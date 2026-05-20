@@ -75,55 +75,246 @@ function repayFixedLoan() {
     addSysLog('은행 대출 원금 $1,000를 정상 상환했습니다.');
 }
 
-// ── 선택적 지출 처리 (잔고 부족 시 팝업) ─────────────
-// 반환값: true = 지출 진행, false = 취소
+// ── 선택적 지출 처리 (잔고 부족 시 모달) ─────────────
 function trySpend(amount, desc) {
     if (money >= amount) {
         updateFinancials('지출', amount, desc);
         return true;
     }
 
-    // 잔고 부족 — 선택 팝업
-    const debt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-    const canLoan = debt + 1000 <= LOAN_LIMIT;
+    // 동기적 처리를 위해 Promise 대신 전역 플래그 방식 사용
+    return trySpendSync(amount, desc);
+}
 
-    const msg =
-        `💰 잔고가 부족합니다!\n\n` +
-        `필요 금액: $${amount}  |  현재 잔고: $${money}\n\n` +
-        `어떻게 하시겠습니까?\n\n` +
-        `[확인] → 마이너스 통장 사용 (이자율 10%)\n` +
-        `[취소] → ${canLoan ? '대출 $1,000 받기' : '취소 (한도 초과)'}`;
+function trySpendSync(amount, desc) {
+    const debt        = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
+    const canLoan     = debt + 1000 <= LOAN_LIMIT && money >= -2000;
+    const creditBlock = money < -2000;
+    const unlockedCount = (() => {
+        let cnt = 0;
+        for (let x = 0; x < GRID_SIZE; x++)
+            for (let y = 0; y < GRID_SIZE; y++)
+                if (farmGrid[x][y].isUnlocked) cnt++;
+        return cnt;
+    })();
+    const hasLand = unlockedCount > 9; // 기본 9칸 초과 = 추가 개간한 토지 있음
 
-    const useOverdraft = confirm(msg);
+    // 신용 차단 상태 (마이너스 -$2,000 이하)
+    if (creditBlock) {
+        const emptyUnlocked = []; // 비어있는 개간 타일 목록
+        const occupiedCount = (() => {
+            let occ = 0;
+            for (let x = 0; x < GRID_SIZE; x++)
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const t = farmGrid[x][y];
+                    if (!t.isUnlocked || (x === 12 && y === 12)) continue; // 초기 9칸 제외
+                    if (t.type === 0 && !t.isRotten) emptyUnlocked.push({ x, y });
+                    else if (t.isUnlocked) occ++;
+                }
+            return occ;
+        })();
 
-    if (useOverdraft) {
-        // 마이너스 통장으로 진행
+        const sellable = emptyUnlocked.length;
+
+        if (!hasLand) {
+            alert(`🚨 부채 비중이 높아 신용 대출이 불가합니다.\n현재 잔고: $${money}\n\n보유 토지가 없어 추가 자금 조달이 불가합니다.\n구매가 취소됩니다.`);
+            addSysLog('🚨 신용 불량 + 토지 없음. 구매 취소.');
+            return false;
+        }
+
+        // 토지 담보 대출 or 토지 매각 선택
+        const msg1 =
+            `🚨 부채 비중이 높아 신용 대출이 불가합니다.\n현재 잔고: $${money}\n\n` +
+            `보유 토지를 활용할 수 있습니다:\n\n` +
+            `[확인] → 토지 담보 대출 ($500, 이자 $30/턴)\n` +
+            `[취소] → 토지 매각 옵션 보기`;
+
+        const takeLandLoan = confirm(msg1);
+
+        if (takeLandLoan) {
+            // 토지 담보 대출
+            fixedLoanAmount  += 500;
+            mortgageAmount    = 500;
+            mortgageActive    = true;
+            mortgageDaysLeft  = 120;
+            document.getElementById('fixed-loan-display').innerText = `$${fixedLoanAmount}`;
+            updateFinancials('수입', 500, '토지 담보 대출 실행');
+            addSysLog('🏠 토지 담보 대출 $500 실행. 120일 내 미상환 시 토지 몰수!');
+            if (money >= amount) {
+                updateFinancials('지출', amount, desc);
+                return true;
+            }
+            addSysLog('⚠️ 담보 대출 후에도 잔고 부족. 구매 취소.');
+            return false;
+        }
+
+        // 토지 매각 옵션
+        if (sellable === 0 && occupiedCount > 0) {
+            alert(
+                `🏚️ 토지 매각 안내\n\n` +
+                `매각 가능한 빈 토지가 없습니다.\n` +
+                `작물이 심어진 타일은 먼저 수확/개간하여 비워야 매각할 수 있습니다.\n\n` +
+                `비어있는 타일: 0칸 | 작물 있는 타일: ${occupiedCount}칸`
+            );
+            addSysLog('⚠️ 빈 토지 없음. 수확 후 매각 가능. 구매 취소.');
+            return false;
+        }
+
+        if (sellable === 0) {
+            alert(`매각 가능한 토지가 없습니다. 구매가 취소됩니다.`);
+            return false;
+        }
+
+        const msg2 =
+            `🏚️ 토지 매각\n\n` +
+            `매각 가능한 빈 토지: ${sellable}칸\n` +
+            `매각가: $70/칸 (개간비 $100 기준 급매)\n\n` +
+            `[확인] → 빈 토지 1칸 매각 (+$70)\n` +
+            `[취소] → 구매 취소`;
+
+        const sellLand = confirm(msg2);
+
+        if (sellLand) {
+            // 가장 최근 개간한 빈 타일 1칸 매각 (배열 마지막)
+            const target = emptyUnlocked[emptyUnlocked.length - 1];
+            farmGrid[target.x][target.y].isUnlocked = false;
+            farmGrid[target.x][target.y].water = 0;
+            updateFinancials('수입', 70, `토지 매각 [${target.x},${target.y}]`);
+            updateUnlockedCountDisplay();
+            addSysLog(`🏚️ 토지 [${target.x},${target.y}] 매각 완료. +$70`);
+
+            if (money >= amount) {
+                updateFinancials('지출', amount, desc);
+                return true;
+            }
+            addSysLog('⚠️ 토지 매각 후에도 잔고 부족. 구매 취소.');
+            return false;
+        }
+
+        addSysLog('구매가 취소됐습니다.');
+        return false;
+    }
+
+    // 일반 잔고 부족 팝업 — 3가지 선택
+    const loanText = canLoan ? '대출 $1,000 받기' : '대출 불가 (한도 초과)';
+    const choice = showSpendModal(amount, desc, loanText, canLoan);
+
+    if (choice === 'overdraft') {
         updateFinancials('지출', amount, desc);
         addSysLog(`🔴 마이너스 통장 사용: -$${amount} (이자율 10%/턴)`);
         return true;
-    } else {
-        // 취소 또는 대출
-        if (!canLoan) {
-            addSysLog('🚨 대출 한도 초과. 지출이 취소됐습니다.');
-            return false;
-        }
-        // 대출 실행
+    } else if (choice === 'loan' && canLoan) {
         fixedLoanAmount += 1000;
         document.getElementById('fixed-loan-display').innerText = `$${fixedLoanAmount}`;
         updateFinancials('수입', 1000, '긴급 대출 실행');
-        addSysLog('🔵 긴급 대출 $1,000 실행. 이자 $50/턴 발생.');
-
-        if (money >= amount) {
-            updateFinancials('지출', amount, desc);
-            return true;
-        } else {
-            // 대출받아도 부족하면 마이너스 통장으로
-            updateFinancials('지출', amount, desc);
-            addSysLog(`🔴 대출 후에도 부족 — 마이너스 통장 사용: -$${amount}`);
-            return true;
-        }
+        addSysLog('🔵 긴급 대출 $1,000 실행. 이자 $50/턴.');
+        updateFinancials('지출', amount, desc);
+        return true;
+    } else {
+        addSysLog('구매가 취소됐습니다.');
+        return false;
     }
 }
+
+function showSpendModal(amount, desc, loanText, canLoan) {
+    // confirm 2번으로 3가지 선택지 구현
+    const msg1 =
+        `💰 잔고가 부족합니다!\n\n` +
+        `필요 금액: $${amount}  |  현재 잔고: $${money}\n\n` +
+        `[확인] → 마이너스 통장 사용 (이자율 10%)\n` +
+        `[취소] → 다른 옵션 보기`;
+
+    const useOverdraft = confirm(msg1);
+    if (useOverdraft) return 'overdraft';
+
+    const msg2 =
+        `다른 옵션을 선택하세요:\n\n` +
+        `[확인] → ${loanText}\n` +
+        `[취소] → 구매 취소`;
+
+    const useLoan = confirm(msg2);
+    if (useLoan && canLoan) return 'loan';
+    return 'cancel';
+}
+
+// ── 담보 대출 카운트다운 (매 틱 호출) ───────────────
+function processMortgage() {
+    if (!mortgageActive) return;
+
+    if (fixedLoanAmount <= 0) {
+        mortgageActive = false;
+        mortgageAmount = 0;
+        mortgageDaysLeft = 120;
+        addSysLog('🏠 토지 담보 대출 상환 완료! 담보가 해제됐습니다.');
+        return;
+    }
+
+    mortgageDaysLeft--;
+
+    if (mortgageDaysLeft > 0 && mortgageDaysLeft <= 30 && mortgageDaysLeft % 10 === 0)
+        addSysLog(`⚠️ 토지 담보 대출 상환 기한 ${mortgageDaysLeft}일 남았습니다!`);
+
+    if (mortgageDaysLeft <= 0) {
+        mortgageActive = false;
+        const seized = seizeLand();
+        if (seized > 0)
+            addSysLog(`🏚️ 담보 기한 초과! 토지 ${seized}칸이 은행에 몰수됐습니다.`);
+        else
+            addSysLog('🏚️ 담보 기한 초과! 몰수할 토지가 없어 부채로 전환됩니다.');
+        mortgageAmount = 0;
+        mortgageDaysLeft = 120;
+    }
+}
+
+// 기본 9타일 (중앙 3×3) — 몰수 제외
+const BASE_TILES = (() => {
+    const set = new Set();
+    const cx = Math.floor(GRID_SIZE / 2);
+    for (let dx = -1; dx <= 1; dx++)
+        for (let dy = -1; dy <= 1; dy++)
+            set.add(`${cx+dx},${cx+dy}`);
+    return set;
+})();
+
+function seizeLand() {
+    const candidates = [];
+    for (let x = 0; x < GRID_SIZE; x++)
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const t = farmGrid[x][y];
+            if (!t.isUnlocked || BASE_TILES.has(`${x},${y}`)) continue;
+            candidates.push({ x, y, empty: t.type === 0 });
+        }
+
+    // 빈 타일 우선, 그 다음 작물 있는 타일
+    candidates.sort((a, b) => (b.empty ? 1 : 0) - (a.empty ? 1 : 0));
+
+    // 담보 잔액 기준으로 몰수 칸 수 계산 (토지 단가 $100)
+    const toSeize = Math.min(
+        Math.ceil(mortgageAmount / 100),
+        candidates.length
+    );
+    let compensation = 0;
+
+    for (let i = 0; i < toSeize; i++) {
+        const { x, y, empty } = candidates[i];
+        if (!empty) compensation += 10;
+        farmGrid[x][y] = {
+            type: 0, progress: 0, water: 0, hasWeed: false,
+            isRotten: false, rottenCause: '', isUnlocked: false,
+            hasPest: false, pestDays: 0, overRipeDays: 0,
+            overWaterDays: 0, droughtDays: 0, treeHarvestCount: 0
+        };
+    }
+
+    if (compensation > 0) {
+        updateFinancials('수입', compensation, '몰수 토지 작물 처분 보상');
+        addSysLog(`🌾 몰수 토지 작물 처분 보상 +$${compensation} (칸당 $10)`);
+    }
+
+    updateUnlockedCountDisplay();
+    return toSeize;
+}
+
 function calculateDailyCost(spouseSkillCut) {
     const winterMult = currentSeason === '겨울' ? 2 : 1;
 

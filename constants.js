@@ -30,7 +30,10 @@ let harvestLog = [];
 let playerName = '플레이어';
 let generation = 1;
 let endingFired = false;
-let dynastyStartDay = -1; // 3대 승계 시작일 (-1 = 미승계)
+let dynastyStartDay  = -1;    // 3대 승계 시작일 (-1 = 미승계)
+let mortgageActive   = false; // 담보 대출 진행 중
+let mortgageDaysLeft = 120;   // 상환 남은 일수
+let mortgageAmount   = 0;     // 담보 대출 잔액
 
 // ── 배우자 상태 ─────────────────────────────────────
 let hasSpouse = false;
@@ -78,6 +81,6 @@ const SEASONAL_CROPS = {
     7:  { name: '산딸기',  season: '봄',  cost: 70,  value: 200, growth: 14, emoji: '🍓', special: null },
     8:  { name: '해바라기',season: '여름',cost: 80,  value: 220, growth: 12, emoji: '🌻', special: 'pestResist' },
     9:  { name: '풋콩',    season: '여름',cost: 60,  value: 160, growth: 16, emoji: '🫘', special: 'weedResist' },
-    10: { name: '송이버섯',season: '가을',cost: 100, value: 350, growth: 8,  emoji: '🍄', special: null },
+    10: { name: '호박',    season: '가을',cost: 100, value: 350, growth: 8,  emoji: '🎃', special: null },
     11: { name: '고구마',  season: '가을',cost: 60,  value: 180, growth: 13, emoji: '🍠', special: 'frostResist' },
 };
