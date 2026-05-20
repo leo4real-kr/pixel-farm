@@ -267,6 +267,8 @@ function animate() {
 // ── 초기 실행 ────────────────────────────────────────
 (function init() {
     preloadImages(() => {
+        resizeCanvas();
+        centerViewOn(Math.floor(GRID_SIZE / 2), Math.floor(GRID_SIZE / 2));
         let name = prompt('🌾 Pixel Farm에 오신 것을 환영합니다!\n\n1대 가장의 이름을 입력해 주세요:', '플레이어');
         playerName = (name && name.trim()) ? name.trim() : '플레이어';
         updateFamilyUI();

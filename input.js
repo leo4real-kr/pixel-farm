@@ -52,9 +52,19 @@ function getCanvasTile(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    const tileX = Math.floor((clientX - rect.left) * scaleX / TILE_SIZE);
-    const tileY = Math.floor((clientY - rect.top)  * scaleY / TILE_SIZE);
-    return { tileX, tileY };
+    const px = (clientX - rect.left) * scaleX;
+    const py = (clientY - rect.top)  * scaleY;
+
+    if (isMobile) {
+        const tileSz = Math.floor(canvas.width / MOBILE_VIEW);
+        const tileX = Math.floor(px / tileSz) + viewOffsetX;
+        const tileY = Math.floor(py / tileSz) + viewOffsetY;
+        return { tileX, tileY };
+    }
+    return {
+        tileX: Math.floor(px / TILE_SIZE),
+        tileY: Math.floor(py / TILE_SIZE),
+    };
 }
 
 // ── 캔버스 클릭 ──────────────────────────────────────
@@ -345,14 +355,41 @@ function buyAreaTool(key) {
 }
 
 // ── 터치 이벤트 (모바일) ────────────────────────────
+let touchStartX = 0, touchStartY = 0;
+let touchMoved = false;
+
 canvas.addEventListener('touchstart', function(event) {
     event.preventDefault();
     const touch = event.changedTouches[0];
-    const { tileX, tileY } = getCanvasTile(touch.clientX, touch.clientY);
-    if (tileX < 0 || tileX >= GRID_SIZE || tileY < 0 || tileY >= GRID_SIZE) return;
-    canvas.dispatchEvent(new MouseEvent('click', {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        bubbles: true
-    }));
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchMoved = false;
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(event) {
+    event.preventDefault();
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist > 30) {
+        // 스와이프 — 뷰포트 이동
+        const tiles = Math.round(dist / 40);
+        if (Math.abs(dx) > Math.abs(dy)) {
+            viewOffsetX += dx < 0 ? tiles : -tiles;
+        } else {
+            viewOffsetY += dy < 0 ? tiles : -tiles;
+        }
+        clampViewport();
+    } else {
+        // 탭 — 타일 클릭
+        const { tileX, tileY } = getCanvasTile(touch.clientX, touch.clientY);
+        if (tileX < 0 || tileX >= GRID_SIZE || tileY < 0 || tileY >= GRID_SIZE) return;
+        canvas.dispatchEvent(new MouseEvent('click', {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            bubbles: true
+        }));
+    }
 }, { passive: false });

@@ -149,20 +149,61 @@ function playSound(type) {
     } catch(e) {}
 }
 
+// ── 모바일 뷰포트 ─────────────────────────────────────
+const MOBILE_VIEW = 13; // 모바일에서 보여줄 칸 수 (13×13)
+let viewOffsetX = 0;    // 뷰포트 시작 X
+let viewOffsetY = 0;    // 뷰포트 시작 Y
+let isMobile = false;
+
+function checkMobile() {
+    isMobile = window.innerWidth <= 900;
+}
+window.addEventListener('resize', () => { checkMobile(); resizeCanvas(); });
+checkMobile();
+
+function resizeCanvas() {
+    if (isMobile) {
+        const size = Math.min(window.innerWidth - 16, 480);
+        canvas.style.width  = size + 'px';
+        canvas.style.height = size + 'px';
+    } else {
+        canvas.style.width  = '';
+        canvas.style.height = '';
+    }
+}
+
+function clampViewport() {
+    viewOffsetX = Math.max(0, Math.min(GRID_SIZE - MOBILE_VIEW, viewOffsetX));
+    viewOffsetY = Math.max(0, Math.min(GRID_SIZE - MOBILE_VIEW, viewOffsetY));
+}
+
+function centerViewOn(x, y) {
+    viewOffsetX = Math.round(x - MOBILE_VIEW / 2);
+    viewOffsetY = Math.round(y - MOBILE_VIEW / 2);
+    clampViewport();
+}
+
 // ── 캔버스 렌더 ──────────────────────────────────────
 function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (let x = 0; x < GRID_SIZE; x++) {
-        for (let y = 0; y < GRID_SIZE; y++) {
+    const startX = isMobile ? viewOffsetX : 0;
+    const startY = isMobile ? viewOffsetY : 0;
+    const endX   = isMobile ? viewOffsetX + MOBILE_VIEW : GRID_SIZE;
+    const endY   = isMobile ? viewOffsetY + MOBILE_VIEW : GRID_SIZE;
+    const tileSz = isMobile ? Math.floor(canvas.width / MOBILE_VIEW) : TILE_SIZE;
+
+    for (let x = startX; x < endX; x++) {
+        for (let y = startY; y < endY; y++) {
             const tile = farmGrid[x][y];
-            const cx = x * TILE_SIZE, cy = y * TILE_SIZE;
+            const cx = (x - startX) * tileSz;
+            const cy = (y - startY) * tileSz;
 
             // 잠긴 타일
             if (!tile.isUnlocked) {
-                ctx.fillStyle = '#444444'; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
-                ctx.strokeStyle = '#333333'; ctx.strokeRect(cx, cy, TILE_SIZE, TILE_SIZE);
-                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+TILE_SIZE, cy+TILE_SIZE); ctx.stroke();
+                ctx.fillStyle = '#444444'; ctx.fillRect(cx, cy, tileSz, tileSz);
+                ctx.strokeStyle = '#333333'; ctx.strokeRect(cx, cy, tileSz, tileSz);
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+tileSz, cy+tileSz); ctx.stroke();
                 continue;
             }
 
@@ -173,29 +214,29 @@ function drawGame() {
                 : 'normal';
             const tileImg = tileImages[tileKey];
             if (tileImg) {
-                ctx.drawImage(tileImg, cx, cy, TILE_SIZE, TILE_SIZE);
+                ctx.drawImage(tileImg, cx, cy, tileSz, tileSz);
             } else {
                 ctx.fillStyle = currentSeason === '겨울' ? '#E0F7FA'
                     : tile.water <= 20 ? '#CD853F'
                     : tile.water >= 90 ? '#4A2E1B' : '#8B5A2B';
-                ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
+                ctx.fillRect(cx, cy, tileSz, tileSz);
             }
 
             // 수분 게이지 — 과수분 시 빨간색 깜빡임
             const isOverWater = tile.overWaterDays > 0;
             const blinkOn = Math.sin(animTimer * 4) > 0;
             ctx.fillStyle = isOverWater ? (blinkOn ? '#ff1744' : '#ff6d00') : '#00b0ff';
-            ctx.fillRect(cx, cy + TILE_SIZE - 4, TILE_SIZE * (tile.water / 100), 4);
+            ctx.fillRect(cx, cy + tileSz - 4, tileSz * (tile.water / 100), 4);
 
             // 작물 렌더
-            drawCrop(tile, cx, cy);
+            drawCrop(tile, cx, cy, tileSz);
 
             // 잡초 오버레이
             if (tile.hasWeed) {
                 const weedImg = cropImages['overlay_weed'];
                 if (weedImg) {
                     ctx.globalAlpha = 0.85;
-                    ctx.drawImage(weedImg, cx, cy, TILE_SIZE, TILE_SIZE);
+                    ctx.drawImage(weedImg, cx, cy, tileSz, tileSz);
                     ctx.globalAlpha = 1.0;
                 } else {
                     ctx.fillStyle = '#1B5E20'; ctx.fillRect(cx+8, cy+22, 12, 15);
@@ -203,30 +244,43 @@ function drawGame() {
                 }
             }
 
-            // 부패 오버레이 (작물이 썩었을 때)
+            // 부패 오버레이
             if (tile.isRotten && tile.type > 0) {
                 const rottenImg = cropImages['overlay_rotten'];
                 if (rottenImg) {
                     ctx.globalAlpha = 0.75;
-                    ctx.drawImage(rottenImg, cx, cy, TILE_SIZE, TILE_SIZE);
+                    ctx.drawImage(rottenImg, cx, cy, tileSz, tileSz);
                     ctx.globalAlpha = 1.0;
                 }
             }
 
-            // 병충해 — 주황색 X (작물이 있는 타일만)
+            // 병충해 — 주황색 X
             if (tile.hasPest && tile.type > 0) {
                 ctx.strokeStyle = '#FF6D00'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(cx+4, cy+4); ctx.lineTo(cx+TILE_SIZE-4, cy+TILE_SIZE-4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(cx+TILE_SIZE-4, cy+4); ctx.lineTo(cx+4, cy+TILE_SIZE-4); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx+4, cy+4); ctx.lineTo(cx+tileSz-4, cy+tileSz-4); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx+tileSz-4, cy+4); ctx.lineTo(cx+4, cy+tileSz-4); ctx.stroke();
                 ctx.lineWidth = 1;
             }
 
-            ctx.strokeStyle = '#5c3a1a'; ctx.strokeRect(cx, cy, TILE_SIZE, TILE_SIZE);
+            ctx.strokeStyle = '#5c3a1a'; ctx.strokeRect(cx, cy, tileSz, tileSz);
         }
+    }
+
+    // 모바일 뷰포트 이동 버튼 (화살표)
+    if (isMobile) {
+        const cs = canvas.width;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (viewOffsetY > 0)             { ctx.fillText('▲', cs/2, 18); }
+        if (viewOffsetY < GRID_SIZE - MOBILE_VIEW) { ctx.fillText('▼', cs/2, cs-18); }
+        if (viewOffsetX > 0)             { ctx.fillText('◀', 18, cs/2); }
+        if (viewOffsetX < GRID_SIZE - MOBILE_VIEW) { ctx.fillText('▶', cs-18, cs/2); }
     }
 }
 
-function drawCrop(tile, cx, cy) {
+function drawCrop(tile, cx, cy, tileSz = TILE_SIZE) {
     // ── 이미지 기반 렌더 ─────────────────────────────
     const nameMap = {
         1: 'carrot',
@@ -280,7 +334,7 @@ function drawCrop(tile, cx, cy) {
         const img = cropImages[`${name}_${stage}`];
         if (img) {
             const bounce = (!tile.isRotten && stage === 4) ? Math.sin(animTimer) * 2 : 0;
-            ctx.drawImage(img, cx, cy + bounce, TILE_SIZE, TILE_SIZE);
+            ctx.drawImage(img, cx, cy + bounce, tileSz, tileSz);
             return;
         }
     }
