@@ -39,6 +39,14 @@ function tick() {
     else { gameDays = 1; currentSeason = '봄'; }
     document.getElementById('seasonDisplay').innerText = currentSeason;
 
+    // 계절 전환 시 폭염/냉해 잔류 방지
+    if (gameDays === 1 || gameDays === 31 || gameDays === 61 || gameDays === 91) {
+        if (currentWeather === '폭염' || currentWeather === '냉해') {
+            currentWeather = '맑음';
+            document.getElementById('weatherDisplay').innerText = currentWeather;
+        }
+    }
+
     // 계절 전환 첫날 — 시즌 작물 강제 폐기 + 사과나무 계절 처리
     if (gameDays === 31 || gameDays === 61 || gameDays === 91 || gameDays === 1) {
         let discarded = 0;
@@ -217,7 +225,10 @@ function tick() {
         triggerEnding('extinction'); return;
     }
 
-    // 12. 결혼 이벤트 체크
+    // 12. 결혼 이벤트 체크 — 매 계절 첫날 재시도
+    if (gameDays === 1 || gameDays === 31 || gameDays === 61 || gameDays === 91) {
+        if (!hasSpouse) marriageEventFired = false; // 계절 전환 시 재도전 허용
+    }
     if (gameDays % 30 === 1 && !hasSpouse && !marriageEventFired &&
         money >= 3000 && unlockedCount >= 20) {
         triggerDiceEvent('marriage');
@@ -234,9 +245,6 @@ function tick() {
 function resetGame(forceReset = false) {
     if (!forceReset && !confirm('농장을 초기화하고 1일차로 리셋하시겠습니까?')) return;
 
-    let name = prompt('1대 가장의 이름을 입력하세요:', '플레이어');
-    playerName = (name && name.trim()) ? name.trim() : '플레이어';
-
     money = 1000; totalRevenue = 0; totalExpense = 0; fixedLoanAmount = 0;
     gameDays = 1; absoluteDays = 1; fullUnlockDay = -1; dynastyStartDay = -1;
     mortgageActive = false; mortgageDaysLeft = 120; mortgageAmount = 0;
@@ -248,7 +256,11 @@ function resetGame(forceReset = false) {
     children = []; retiredFamily = [];
     Object.keys(toolDurability).forEach(k => { toolDurability[k] = -1; });
     ledgerLog = []; harvestLog = []; sysLog = [];
-    document.getElementById('info').innerHTML = '';
+
+    const infoEl = document.getElementById('info');
+    if (infoEl) infoEl.innerHTML = '';
+    const miniEl = document.getElementById('info-mini');
+    if (miniEl) miniEl.innerHTML = '';
 
     document.getElementById('ledger-list').innerHTML  = '<div style="color:#888;font-size:11px;">지출 내역 없음</div>';
     document.getElementById('harvest-list').innerHTML = '<div style="color:#888;font-size:11px;">수확 기록 없음</div>';
@@ -256,9 +268,22 @@ function resetGame(forceReset = false) {
 
     farmGrid = initGrid();
     selectTool('select');
-    updateFinancials('수입', 0, '회계 장부 개설');
-    updateUnlockedCountDisplay();
-    setGameSpeed(1);
+
+    if (forceReset) {
+        // 엔딩 후 리셋 — 타이틀 화면으로 복귀
+        const ts = document.getElementById('title-screen');
+        if (ts) {
+            ts.style.display = 'flex';
+            document.getElementById('title-step-1').style.display = 'block';
+            document.getElementById('title-step-2').style.display = 'none';
+            document.getElementById('title-step-3').style.display = 'none';
+            document.getElementById('title-name-input').value = '';
+        }
+    } else {
+        updateFinancials('수입', 0, '회계 장부 개설');
+        updateUnlockedCountDisplay();
+        setGameSpeed(1);
+    }
 }
 
 // ── 애니메이션 루프 ──────────────────────────────────

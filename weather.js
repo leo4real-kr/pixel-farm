@@ -124,13 +124,12 @@ function spreadPest(x, y, type) {
 function applyGrowth(tile) {
     if (tile.type === 0) return;
 
-    // 사과나무는 절대 썩지 않음 — 피해는 progress 감소로만 처리
+    // 사과나무는 절대 썩지 않음 — progress는 main.js 계절 전환에서만 제어
     if (tile.type === 5) {
-        if (tile.isRotten) { tile.isRotten = false; tile.rottenCause = ''; } // 안전망
-        if (tile.water <= 0) return; // 가뭄: 성장 정지
-        if (tile.progress < 100) {
-            const growth = [0, 0, 0, 0, 0, 5][tile.type] || 0;
-            tile.progress = Math.min(100, tile.progress + growth);
+        if (tile.isRotten) { tile.isRotten = false; tile.rottenCause = ''; }
+        // 가을에만 progress 증가 (main.js에서 0으로 리셋 후 여기서 성장)
+        if (currentSeason === '가을' && tile.progress < 100 && tile.water > 0) {
+            tile.progress = Math.min(100, tile.progress + 5);
         }
         return;
     }

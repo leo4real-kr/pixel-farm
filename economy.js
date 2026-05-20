@@ -241,7 +241,8 @@ function showSpendModal(amount, desc, loanText, canLoan) {
 function processMortgage() {
     if (!mortgageActive) return;
 
-    if (fixedLoanAmount <= 0) {
+    // 전체 대출액이 담보 금액 미만으로 줄었으면 담보 상환 완료
+    if (fixedLoanAmount < mortgageAmount) {
         mortgageActive = false;
         mortgageAmount = 0;
         mortgageDaysLeft = 120;
@@ -266,13 +267,12 @@ function processMortgage() {
     }
 }
 
-// 기본 9타일 (중앙 3×3) — 몰수 제외
+// 기본 9타일 (x:11~13, y:11~13) — 몰수 제외
 const BASE_TILES = (() => {
     const set = new Set();
-    const cx = Math.floor(GRID_SIZE / 2);
-    for (let dx = -1; dx <= 1; dx++)
-        for (let dy = -1; dy <= 1; dy++)
-            set.add(`${cx+dx},${cx+dy}`);
+    for (let x = 11; x <= 13; x++)
+        for (let y = 11; y <= 13; y++)
+            set.add(`${x},${y}`);
     return set;
 })();
 
