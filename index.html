@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Pixel Farm v0.1.1 α</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="main-layout">
+    <div id="dice-overlay">
+        <h2 id="dice-title" style="color: #ff9800; margin: 0;">🎲 가족 확장 주사위 이벤트 🎲</h2>
+        <p id="dice-desc" style="color: #ccc; margin: 5px 0 15px 0;">과연 새로운 가족이 합류할 수 있을까요?</p>
+        <div class="dice-box">
+            <div id="dice1" class="cube">?</div>
+            <div id="dice2" class="cube">?</div>
+        </div>
+        <h3 id="dice-result" style="margin: 10px 0; min-height: 24px;"></h3>
+        <button id="dice-confirm-btn" class="popup-btn" onclick="closeDicePopup()">결과 확인</button>
+    </div>
+
+    <div id="left-panel">
+        <h1>Pixel Farm v0.1.1 α</h1>
+        
+        <div id="top-hud">
+            <div class="hud-item" id="calendar-hud" style="cursor:default; user-select:none;">🗓️ <span id="seasonDisplay" class="value">봄</span> <span id="dayDisplay">1</span>일차</div>
+            <div class="hud-item">🌤️ 날씨: <span id="weatherDisplay" class="value">맑음</span></div>
+            <div class="hud-item">⏱️ 속도: <span id="speedDisplay" class="value">1배속</span></div>
+            <div class="hud-item">💰 자금: <span class="value">$<span id="moneyDisplay">1000</span></span></div>
+            <div class="hud-item">🗺️ 소유 영토: <span class="value"><span id="unlockedDisplay">9</span> / 625 칸</span></div>
+            <div class="hud-item">🔧 도구: <span id="toolDisplay" class="value">일반 선택</span></div>
+        </div>
+        
+        <div id="canvas-container">
+            <canvas id="farmCanvas" width="550" height="550"></canvas>
+        </div>
+        
+        <!-- 컨트롤 + 시스템 알림 좌우 배치 wrapper -->
+        <div style="display:flex; gap:6px; width:100%; margin-top:6px; align-items:flex-start; min-height:0;">
+
+            <!-- 좌: 탭 방식 컨트롤 보드 -->
+            <div id="control-board" style="flex:1; min-width:0;">
+
+                <!-- 탭 헤더 -->
+                <div style="display:flex; gap:2px; margin-bottom:4px;">
+                    <button class="tab-btn active" id="tab-basic" onclick="switchTab('basic')">🛠️ 기본</button>
+                    <button class="tab-btn" id="tab-shop" onclick="switchTab('shop')">🛒 농장상점</button>
+                    <button class="tab-btn" id="tab-log" onclick="switchTab('log')">💬 시스템 알림</button>
+                </div>
+
+                <!-- 탭: 기본 -->
+                <div id="tab-content-basic">
+                    <div class="control-group time-group">
+                        <span class="group-title">⏱️ 시간</span>
+                        <button class="time-btn speed-btn" id="time-pause" onclick="setGameSpeed(0)">⏸️ 정지</button>
+                        <button class="time-btn speed-btn active" id="time-x1" onclick="setGameSpeed(1)">▶️ 1배속</button>
+                        <button class="time-btn speed-btn" id="time-x2" onclick="setGameSpeed(2)">⏩ 2배속</button>
+                        <button class="time-btn reset-btn" onclick="resetGame()">🔄 초기화</button>
+                    </div>
+                    <div class="control-group">
+                        <span class="group-title">🛠️ 기본 작업</span>
+                        <button class="shop-btn active" id="btn-select" onclick="selectTool('select')">선택/조사</button>
+                        <button class="shop-btn" id="btn-water" onclick="selectTool('water')">💦 물 주기</button>
+                        <button class="shop-btn" id="btn-drain" onclick="selectTool('drain')">🚿 배수 처리</button>
+                        <button class="shop-btn" id="btn-weed" onclick="selectTool('clearWeed')">✂️ 잡초 제거</button>
+                        <button class="shop-btn" id="btn-expand" onclick="selectTool('expand')">📦 영토 확장 ($100)</button>
+                        <button class="shop-btn" id="btn-harvest" onclick="selectTool('harvest')">🌾 수확/개간</button>
+                        <button class="shop-btn" id="btn-pesticide" onclick="selectTool('pesticide')">🧪 농약 ($80)</button>
+                    </div>
+                    <div class="control-group">
+                        <span class="group-title">🌱 씨앗 및 묘목 (사계절)</span>
+                        <button class="shop-btn" id="btn-carrot" onclick="selectTool('carrot')">당근 ($20)</button>
+                        <button class="shop-btn" id="btn-potato" onclick="selectTool('potato')">감자 ($30)</button>
+                        <button class="shop-btn" id="btn-corn" onclick="selectTool('corn')">옥수수 ($50)</button>
+                        <button class="shop-btn" id="btn-strawberry" onclick="selectTool('strawberry')">딸기 ($80)</button>
+                        <button class="shop-btn" id="btn-sapling" onclick="selectTool('sapling')">🌳 묘목 ($300)</button>
+                    </div>
+                    <div class="control-group" id="seasonal-crop-group">
+                        <span class="group-title" id="seasonal-crop-title">🌷 계절 전용 작물</span>
+                        <!-- 계절별로 updateSeasonalButtons()가 동적으로 표시 -->
+                        <button class="shop-btn" id="btn-tulip"       onclick="selectTool('tulip')"       style="background:#ad1457; display:none;">🌷 튤립 ($40)</button>
+                        <button class="shop-btn" id="btn-wildberry"   onclick="selectTool('wildberry')"   style="background:#ad1457; display:none;">🍓 산딸기 ($70)</button>
+                        <button class="shop-btn" id="btn-sunflower"   onclick="selectTool('sunflower')"   style="background:#e65100; display:none;">🌻 해바라기 ($80)</button>
+                        <button class="shop-btn" id="btn-edamame"     onclick="selectTool('edamame')"     style="background:#e65100; display:none;">🫘 풋콩 ($60)</button>
+                        <button class="shop-btn" id="btn-pumpkin"     onclick="selectTool('pumpkin')"     style="background:#4e342e; display:none;">🎃 호박 ($100)</button>
+                        <button class="shop-btn" id="btn-sweetpotato" onclick="selectTool('sweetpotato')" style="background:#4e342e; display:none;">🍠 고구마 ($60)</button>
+                        <span id="seasonal-none" style="font-size:11px; color:#555;">❄️ 겨울에는 계절 작물을 심을 수 없습니다.</span>
+                    </div>
+                </div>
+
+                <!-- 탭: 농장상점 -->
+                <div id="tab-content-shop" style="display:none;">
+                    <div class="control-group">
+                        <span class="group-title">🛒 범위 도구 구매</span>
+                        <div id="tool-shop-body" style="margin-top:2px;">
+                            <div style="color:#555;font-size:10px;">로딩 중...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 탭: 시스템 알림 -->
+                <div id="tab-content-log" style="display:none; height:180px; background:#1a1a1a; border:1px solid #444; border-radius:6px; padding:6px; box-sizing:border-box; overflow-y:auto;">
+                    <div id="info" style="font-size:11px; color:#aaa; word-break:break-all;"></div>
+                </div>
+
+            </div>
+
+            <!-- 우: 시스템 알림 (항상 표시, 작은 창) -->
+            <div id="info-panel" style="width:200px; flex-shrink:0; background:#1a1a1a; border:1px solid #444; border-radius:6px; padding:6px; box-sizing:border-box; height:200px; display:flex; flex-direction:column;">
+                <div style="font-size:10px; color:#888; font-weight:bold; margin-bottom:4px; flex-shrink:0;">💬 알림</div>
+                <div id="info-mini" style="flex:1; font-size:10px; color:#aaa; overflow-y:auto; word-break:break-all; min-height:0;"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="right-panel">
+        <!-- 세이브 / 로드 패널 -->
+        <div class="info-card" style="padding:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <h3 style="margin:0;padding:0;border:none;font-size:13px;color:#bbb;">💾 세이브 / 로드</h3>
+                <button class="time-btn" style="font-size:10px;padding:2px 8px;"
+                    onclick="this.closest('.info-card').querySelector('#save-panel-body').style.display === 'none'
+                        ? (renderSavePanel(), this.closest('.info-card').querySelector('#save-panel-body').style.display='block', this.innerText='▲ 닫기')
+                        : (this.closest('.info-card').querySelector('#save-panel-body').style.display='none', this.innerText='▼ 열기')">
+                    ▼ 열기
+                </button>
+            </div>
+            <div id="save-panel-body" style="display:none;">
+                <!-- 슬롯들은 renderSavePanel()이 동적으로 채움 -->
+                <div style="display:flex;gap:4px;margin-top:6px;">
+                    <button class="time-btn" style="flex:1;font-size:10px;padding:3px;background:#4a148c;" onclick="exportSave()">📤 파일 내보내기</button>
+                    <label class="time-btn" style="flex:1;font-size:10px;padding:3px;background:#1a237e;cursor:pointer;text-align:center;">
+                        📥 파일 불러오기
+                        <input type="file" accept=".json" style="display:none;" onchange="importSave(event)">
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="info-card">
+            <h3>👨‍👩‍👧‍👦 가족 상태 및 실시간 행동</h3>
+            <div id="family-list">
+                <div class="member-row">🧑‍🌾 나 (가장): <span class="member-status status-work">대기 중</span></div>
+            </div>
+            <div id="expense-warning" class="expense-text"></div>
+            
+            <button id="btn-pregnancy" class="time-btn" 
+                style="margin-top:10px; width:100%; background:#ad1457; font-size:11px; font-weight:bold; border-radius:4px; padding:6px 0;"
+                onclick="tryPregnancy()">
+                👶 임신 계획 시도 ($6,000 / 50칸 필요)
+            </button>
+        </div>
+
+        <div class="info-card">
+            <h3>🏦 은행 금융 창구 (한도 $3,000)</h3>
+            <div class="data-row"><span style="font-size:12px; color:#aaa;">일반 신용 대출 원금:</span> <span id="fixed-loan-display" style="font-weight:bold; color:#ff5252;">$0</span></div>
+            <div style="display:flex; gap:4px; margin-top:6px;">
+                <button class="time-btn" style="background:#3f51b5; flex:1; font-size:11px; padding:4px;" onclick="borrowFixedLoan()">+$1000 대출</button>
+                <button class="time-btn" style="background:#4caf50; flex:1; font-size:11px; padding:4px;" onclick="repayFixedLoan()">-$1000 상환</button>
+            </div>
+        </div>
+
+        <div class="info-card stats-card">
+            <h3>📈 농가 회계 누적 통계</h3>
+            <div class="data-row"><span>총 수입 합계:</span> <span id="total-revenue" style="color:#4ff3a6; font-weight:bold;">$0</span></div>
+            <div class="data-row"><span>총 지출 합계:</span> <span id="total-expense" style="color:#ff5252; font-weight:bold;">$0</span></div>
+            <div class="data-row" style="border-top:1px solid #444; margin-top:4px; padding-top:4px;"><span>순이익 누계:</span> <span id="net-profit" style="font-weight:bold;">$0</span></div>
+        </div>
+
+        <div class="info-card log-card">
+            <h3>💸 실시간 입출력 내역</h3>
+            <div id="ledger-list" class="log-box">
+                <div style="color:#888; font-size:11px;">지출 내역 없음</div>
+            </div>
+        </div>
+
+        <div class="info-card log-card">
+            <h3>🧺 최근 수확 기록</h3>
+            <div id="harvest-list" class="log-box">
+                <div style="color:#888; font-size:11px;">수확 기록 없음</div>
+            </div>
+        </div>
+
+        <!-- 테스터 치트 패널: 달력 HUD 3연타 시 표시 -->
+        <div id="cheat-panel" class="info-card" style="display:none; background:#151515; border:1px dashed #ff9800; padding:8px;">
+            <div style="font-size:10px; color:#ff9800; font-weight:bold; margin-bottom:6px; text-align:center;">⚡ TESTER CHEAT PANEL</div>
+            <div style="font-size:10px; color:#666; margin-bottom:4px; text-align:center;">💰 자금</div>
+            <div style="display:flex; gap:3px; margin-bottom:6px;">
+                <button class="time-btn" style="background:#e65100; flex:1; font-size:10px; padding:3px;" onclick="cheatAddMoney(1000)">+$1,000</button>
+                <button class="time-btn" style="background:#e65100; flex:1; font-size:10px; padding:3px;" onclick="cheatAddMoney(10000)">+$10,000</button>
+                <button class="time-btn" style="background:#b71c1c; flex:1; font-size:10px; padding:3px;" onclick="cheatClearDebt()">부채탕감</button>
+            </div>
+            <div style="font-size:10px; color:#666; margin-bottom:4px; text-align:center;">🗓️ 시간</div>
+            <div style="display:flex; gap:3px; margin-bottom:4px;">
+                <button class="time-btn" style="background:#1565c0; flex:1; font-size:10px; padding:3px;" onclick="cheatSkipDay(10)">+10일</button>
+                <button class="time-btn" style="background:#1565c0; flex:1; font-size:10px; padding:3px;" onclick="cheatSkipDay(30)">+30일</button>
+            </div>
+            <div style="display:flex; gap:3px; margin-bottom:6px;">
+                <button class="time-btn" style="background:#283593; flex:1; font-size:9px; padding:3px;" onclick="cheatSetSeason('봄')">→봄</button>
+                <button class="time-btn" style="background:#283593; flex:1; font-size:9px; padding:3px;" onclick="cheatSetSeason('여름')">→여름</button>
+                <button class="time-btn" style="background:#283593; flex:1; font-size:9px; padding:3px;" onclick="cheatSetSeason('가을')">→가을</button>
+                <button class="time-btn" style="background:#283593; flex:1; font-size:9px; padding:3px;" onclick="cheatSetSeason('겨울')">→겨울</button>
+            </div>
+            <div style="font-size:10px; color:#666; margin-bottom:4px; text-align:center;">👨‍👩‍👧 가족</div>
+            <div style="display:flex; gap:3px;">
+                <button class="time-btn" style="background:#4a148c; flex:1; font-size:10px; padding:3px;" onclick="cheatAddSpouse()">배우자 즉시</button>
+                <button class="time-btn" style="background:#1b5e20; flex:1; font-size:10px; padding:3px;" onclick="cheatAddChild()">자녀 추가</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="./constants.js"></script>
+<script src="./saveload.js"></script>
+<script src="./grid.js"></script>
+<script src="./economy.js"></script>
+<script src="./weather.js"></script>
+<script src="./endings.js"></script>
+<script src="./family.js"></script>
+<script src="./render.js"></script>
+<script src="./input.js"></script>
+<script src="./cheat.js"></script>
+<script src="./main.js"></script>
+</body>
+</html>

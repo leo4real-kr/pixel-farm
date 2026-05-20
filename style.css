@@ -1,0 +1,271 @@
+body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#main-layout {
+    position: relative;
+    display: flex;
+    width: 95vw;
+    height: 94vh;
+    background: #252525;
+    border-radius: 12px;
+    border: 3px solid #444;
+    overflow: hidden;
+}
+
+/* 좌측 농장 플레이 영역 */
+#left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 15px;
+    background: #2b2b2b;
+    border-right: 3px solid #444;
+    min-height: 0;
+    overflow: hidden;
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* 상단 배치 대시보드 HUD */
+#top-hud {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    background: #1e1e1e;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+.hud-item {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+#canvas-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #1e1e1e;
+    border: 2px solid #555;
+    border-radius: 6px;
+    width: 100%;
+    overflow: auto;
+}
+
+canvas {
+    background-color: #8B5A2B;
+    cursor: pointer;
+}
+
+#control-board {
+    min-width: 0;
+}
+
+.control-group {
+    background: #222;
+    padding: 6px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+.group-title {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+    font-weight: bold;
+}
+
+.shop-btn {
+    background-color: #388E3C;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    margin: 2px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.shop-btn:hover { background-color: #2E7D32; }
+.shop-btn.active {
+    background-color: #F57C00;
+    box-shadow: 0 0 6px #F57C00;
+}
+
+/* 우측 관리 데이터 영역 */
+#right-panel {
+    width: 290px;
+    background: #222;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.info-card {
+    background: #2d2d2d;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
+
+.flex-grow {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #bbb;
+    border-bottom: 1px solid #444;
+    padding-bottom: 4px;
+}
+
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.value {
+    font-weight: bold;
+    color: #ffb74d;
+}
+
+.text-center { text-align: center; }
+
+.tab-btn {
+    background: #333;
+    color: #aaa;
+    border: 1px solid #555;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    border-bottom: none;
+}
+.tab-btn.active {
+    background: #222;
+    color: #ffb74d;
+    border-color: #666;
+    font-weight: bold;
+}
+.tab-btn:hover { background: #2a2a2a; }
+
+.time-btn {
+    background-color: #444;
+    color: white;
+    border: 1px solid #555;
+    padding: 5px 10px;
+    margin: 0 2px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.time-btn.active { background-color: #ad1457; font-weight: bold; }
+.speed-btn.active {
+    background-color: #ff9800;
+    color: #000;
+    font-weight: bold;
+    box-shadow: 0 0 8px #ff9800;
+    border-color: #ff9800;
+}
+.reset-btn { background-color: #c62828; }
+
+.member-row {
+    font-size: 12px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.member-status {
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+}
+
+.status-work { background: #2e7d32; color: #fff; }
+
+.expense-text {
+    font-size: 11px;
+    color: #ef5350;
+    margin-top: 6px;
+    font-weight: bold;
+    text-align: right;
+}
+
+.log-box {
+    max-height: 75px;
+    overflow-y: auto;
+}
+
+#info {
+    flex: 1;
+    font-size: 11px;
+    color: #aaa;
+    background: #151515;
+    padding: 6px;
+    border-radius: 4px;
+    word-break: break-all;
+}
+
+/* 🎲 주사위 및 가챠 팝업 연출 레이아웃 */
+#dice-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dice-box {
+    display: flex;
+    gap: 30px;
+    margin: 20px 0;
+}
+
+.cube {
+    width: 60px; height: 60px;
+    background: #fff; color: #222;
+    font-size: 32px; font-weight: bold;
+    display: flex; justify-content: center; align-items: center;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+}
+
+.popup-btn {
+    background: #ff9800; color: white; border: none;
+    padding: 8px 20px; font-size: 14px; cursor: pointer;
+    border-radius: 4px; margin-top: 15px; font-weight: bold;
+}
+.popup-btn:hover { background: #e65100; }

@@ -1,0 +1,279 @@
+// ── 게임 속도 제어 ───────────────────────────────────
+function setGameSpeed(speed) {
+    gameSpeed = speed;
+    // speed-btn 전체 active 제거
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    const speedDisplay = document.getElementById('speedDisplay');
+
+    if (speed === 0) {
+        speedDisplay.innerText = '일시정지';
+        document.getElementById('time-pause').classList.add('active');
+        clearInterval(gameInterval); gameInterval = null;
+    } else if (speed === 1) {
+        speedDisplay.innerText = '1배속';
+        document.getElementById('time-x1').classList.add('active');
+        restartTimer(15000);
+    } else if (speed === 2) {
+        speedDisplay.innerText = '2배속';
+        document.getElementById('time-x2').classList.add('active');
+        restartTimer(5000);
+    }
+}
+
+// ── 메인 게임 루프 ───────────────────────────────────
+function restartTimer(ms) {
+    if (gameInterval) clearInterval(gameInterval);
+    gameInterval = setInterval(tick, ms);
+}
+
+function tick() {
+    // 1. 날짜/계절 진행
+    gameDays++;
+    absoluteDays++;
+    document.getElementById('dayDisplay').innerText = gameDays;
+
+    if      (gameDays <= 30)  currentSeason = '봄';
+    else if (gameDays <= 60)  currentSeason = '여름';
+    else if (gameDays <= 90)  currentSeason = '가을';
+    else if (gameDays <= 120) currentSeason = '겨울';
+    else { gameDays = 1; currentSeason = '봄'; }
+    document.getElementById('seasonDisplay').innerText = currentSeason;
+
+    // 계절 전환 첫날 — 시즌 작물 강제 폐기 + 사과나무 계절 처리
+    if (gameDays === 31 || gameDays === 61 || gameDays === 91 || gameDays === 1) {
+        let discarded = 0;
+        for (let x = 0; x < GRID_SIZE; x++) {
+            for (let y = 0; y < GRID_SIZE; y++) {
+                const t = farmGrid[x][y];
+                if (!t.isUnlocked) continue;
+
+                // 사과나무 계절 처리
+                if (t.type === 5) {
+                    if (gameDays === 91) {
+                        // 가을 진입 — 사과 성장 시작
+                        t.progress = 0;
+                    } else if (gameDays === 61) {
+                        // 여름 진입 — 초록 열매 단계
+                        if (t.treeHarvestCount > 0) t.progress = 50;
+                    } else if (gameDays === 31) {
+                        // 봄 진입 — 꽃나무 단계 (2년차 이후)
+                        if (t.treeHarvestCount > 0) {
+                            t.progress = 30;
+                            addSysLog('🌸 사과나무에 꽃이 피었습니다!');
+                        }
+                    } else if (gameDays === 1) {
+                        // 봄 진입 (새 사이클) — 첫 해 나무도 봄에 꽃 피기 시작
+                        if (t.treeHarvestCount > 0) {
+                            t.progress = 30;
+                            addSysLog('🌸 사과나무에 꽃이 피었습니다!');
+                        } else {
+                            // 첫 해 봄 → 어린 나무 성장 계속
+                            t.progress = Math.min(t.progress + 20, 90);
+                        }
+                    }
+                    continue;
+                }
+
+                if (t.type < 6 || t.isRotten) continue;
+                const crop = SEASONAL_CROPS[t.type];
+                if (crop && crop.season !== currentSeason) {
+                    t.isRotten = true;
+                    t.rottenCause = 'season';
+                    discarded++;
+                }
+            }
+        }
+        if (discarded > 0)
+            addSysLog(`🍂 계절 전환! ${discarded}칸의 계절 작물이 폐기됐습니다. 수확/개간으로 정리하세요.`);
+    }
+
+    // 2. 날씨 전환
+    tickWeather();
+
+    // 3. 임신 쿨다운
+    tickPregnancyCooldown();
+
+    // 4. 영토 카운트
+    const unlockedCount = updateUnlockedCountDisplay();
+
+    // 5. 엔딩 체크 (대지주 / 명문가 카운트다운)
+    // 명문가 진행 중이면 대지주 체크 스킵
+    if (dynastyStartDay === -1 && unlockedCount >= 625) {
+        if (fullUnlockDay === -1) {
+            fullUnlockDay = absoluteDays;
+            addSysLog('🌾 625칸 개간 완료! 이 상태로 240일을 버텨내면 대지주 엔딩 달성!');
+        }
+        const survived = absoluteDays - fullUnlockDay;
+        if (survived >= 240) { triggerEnding('landlord'); return; }
+        document.getElementById('expense-warning').innerText =
+            `🌾 대지주 카운트다운: ${survived} / 240일 경과`;
+    } else if (dynastyStartDay === -1) {
+        fullUnlockDay = -1;
+    }
+
+    // 3대 명문가 엔딩 카운트다운
+    if (dynastyStartDay !== -1) {
+        const dynastyDays = absoluteDays - dynastyStartDay;
+        const remaining = 120 - dynastyDays;
+        if (dynastyDays >= 120) { triggerEnding('dynasty'); return; }
+        document.getElementById('expense-warning').innerText =
+            `👑 명문가 엔딩까지 ${remaining}일 남음`;
+        if (remaining <= 30 && remaining > 0 && gameDays % 10 === 0)
+            addSysLog(`👑 명문가 엔딩까지 ${remaining}일 남았습니다. 파산하지 마세요!`);
+    }
+
+    // 6. 타일 1차 수집 — 사전 카운트 (weedCount, treePositions, cornPositions)
+    const weedTiles = [], dryTiles = [], rottenTiles = [];
+    const treePositions = [], cornPositions = [];
+    let weedCount = 0;
+
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const t = farmGrid[x][y];
+            if (!t.isUnlocked) continue;
+            if (t.hasWeed) weedCount++;
+            if (t.type === 5 && t.progress >= 100) treePositions.push({x, y});
+            if (t.type === 3) cornPositions.push({x, y});
+        }
+    }
+
+    // 7. 타일 효과 적용 — weedCount는 사전 집계값 사용
+    // 병충해 신규 발생 감지를 위해 적용 전 감염 수 스냅샷
+    let pestCountBefore = 0;
+    for (let x = 0; x < GRID_SIZE; x++)
+        for (let y = 0; y < GRID_SIZE; y++)
+            if (farmGrid[x][y].hasPest) pestCountBefore++;
+
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const tile = farmGrid[x][y];
+            if (!tile.isUnlocked) continue;
+
+            const nearTree = treePositions.some(t => Math.abs(t.x-x) <= 1 && Math.abs(t.y-y) <= 1);
+            const nearCorn = cornPositions.some(c => Math.abs(c.x-x) <= 1 && Math.abs(c.y-y) <= 1);
+
+            applyWaterDrain(tile, nearTree);
+            applyFrost(tile);
+            applyOverwater(tile);
+            applyPest(tile, x, y, weedCount);
+            applyWeedSpawn(tile, nearCorn);
+            applyGrowth(tile);
+        }
+    }
+
+    // 병충해 신규 발생 알림 (이번 틱에 새로 감염된 타일이 있을 때만)
+    let pestCountAfter = 0;
+    for (let x = 0; x < GRID_SIZE; x++)
+        for (let y = 0; y < GRID_SIZE; y++)
+            if (farmGrid[x][y].hasPest) pestCountAfter++;
+    if (pestCountAfter > pestCountBefore)
+        addSysLog(`🐛 병충해 발생! ${pestCountAfter - pestCountBefore}곳에 새로 감염됐습니다. 농약 살포 또는 잡초 관리가 필요합니다.`);
+
+    // ripeTiles는 타일 효과 적용 완료 후 수집 — 부패 전환된 타일 제외
+    const ripeTiles = [];
+    for (let x = 0; x < GRID_SIZE; x++) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            const tile = farmGrid[x][y];
+            if (!tile.isUnlocked) continue;
+            if (tile.hasWeed)  weedTiles.push(tile);
+            if (tile.water <= 50) dryTiles.push(tile);
+            if (tile.type > 0 && tile.type !== 5 && tile.progress >= 100 && !tile.isRotten)
+                ripeTiles.push({tile, x, y});
+            if (tile.type > 0 && tile.isRotten) rottenTiles.push(tile);
+        }
+    }
+
+    // 8. 가족 행동 & 스킬 절감 계수 획득
+    const spouseSkillCut = runFamilyActions(dryTiles, weedTiles, ripeTiles, rottenTiles);
+
+    // 9. 지출 계산
+    const { baseLiving, finalChildCost, adultChildCount } = calculateDailyCost(spouseSkillCut);
+    const expEl = document.getElementById('expense-warning');
+
+    if (fullUnlockDay === -1 && dynastyStartDay === -1) {
+        expEl.innerText = `${currentSeason === '겨울' ? '⚠️ ' : ''}가족 부양: -$${baseLiving}`;
+        if (finalChildCost > 0)
+            expEl.innerText += ` | 자녀 양육비: -$${finalChildCost}`;
+        if (adultChildCount > 0)
+            expEl.innerText += ` | 청년 ${adultChildCount}명 생활비 분담 중`;
+    }
+
+    updateFinancials('지출', baseLiving, `${currentSeason} 가계 소비액`);
+    if (finalChildCost > 0)
+        updateFinancials('지출', finalChildCost,
+            `자녀 양육/교육비 (${children.filter(c => c.age <= 30).length}명)`);
+
+    // 10. 이자
+    applyInterests();
+
+    // 11. 엔딩 판정 (파산/억만장자/단절)
+    const totalDebt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
+    if (totalDebt >= LOAN_LIMIT) { triggerEnding('bankruptcy'); return; }
+    if (fixedLoanAmount === 0 && money > 0 && money >= BILLIONAIRE_GOAL) { triggerEnding('billionaire'); return; }
+    if (absoluteDays >= RETIRE_DAY && !children.some(c => c.age >= 31)) {
+        triggerEnding('extinction'); return;
+    }
+
+    // 12. 결혼 이벤트 체크
+    if (gameDays % 30 === 1 && !hasSpouse && !marriageEventFired &&
+        money >= 3000 && unlockedCount >= 20) {
+        triggerDiceEvent('marriage');
+    }
+
+    // 13. 자동 저장 (매 5일)
+    if (gameDays % 5 === 0) autoSave();
+
+    // 14. UI 갱신
+    updateFamilyUI();
+}
+
+// ── 게임 초기화 ──────────────────────────────────────
+function resetGame(forceReset = false) {
+    if (!forceReset && !confirm('농장을 초기화하고 1일차로 리셋하시겠습니까?')) return;
+
+    let name = prompt('1대 가장의 이름을 입력하세요:', '플레이어');
+    playerName = (name && name.trim()) ? name.trim() : '플레이어';
+
+    money = 1000; totalRevenue = 0; totalExpense = 0; fixedLoanAmount = 0;
+    gameDays = 1; absoluteDays = 1; fullUnlockDay = -1; dynastyStartDay = -1;
+    generation = 1; endingFired = false;
+    currentSeason = '봄'; currentWeather = '맑음'; currentTool = 'select';
+    hasSpouse = false; spouseName = ''; spouseGrade = 'C';
+    isPregnant = false; pregnancyDays = 0; pregnancyCooldown = 0;
+    marriageEventFired = false; spouseActionText = '대기 중';
+    children = []; retiredFamily = [];
+    Object.keys(toolDurability).forEach(k => { toolDurability[k] = -1; });
+    ledgerLog = []; harvestLog = []; sysLog = [];
+    document.getElementById('info').innerHTML = '';
+
+    document.getElementById('ledger-list').innerHTML  = '<div style="color:#888;font-size:11px;">지출 내역 없음</div>';
+    document.getElementById('harvest-list').innerHTML = '<div style="color:#888;font-size:11px;">수확 기록 없음</div>';
+    document.getElementById('fixed-loan-display').innerText = '$0';
+
+    farmGrid = initGrid();
+    selectTool('select');
+    updateFinancials('수입', 0, '회계 장부 개설');
+    updateUnlockedCountDisplay();
+    setGameSpeed(1);
+}
+
+// ── 애니메이션 루프 ──────────────────────────────────
+function animate() {
+    animTimer += 0.05;
+    drawGame();
+    requestAnimationFrame(animate);
+}
+
+// ── 초기 실행 ────────────────────────────────────────
+(function init() {
+    preloadImages(() => {
+        let name = prompt('🌾 Pixel Farm에 오신 것을 환영합니다!\n\n1대 가장의 이름을 입력해 주세요:', '플레이어');
+        playerName = (name && name.trim()) ? name.trim() : '플레이어';
+        updateFamilyUI();
+        updateFinancials('수입', 0, '회계 장부 개설');
+        updateUnlockedCountDisplay();
+        renderToolShop();
+        setGameSpeed(1);
+        animate();
+    });
+})();
