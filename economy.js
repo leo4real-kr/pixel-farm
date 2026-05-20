@@ -82,7 +82,13 @@ function trySpend(amount, desc) {
         return true;
     }
 
-    // 동기적 처리를 위해 Promise 대신 전역 플래그 방식 사용
+    // 이미 마이너스 통장 사용 중이면 팝업 없이 그냥 추가 지출
+    if (money < 0) {
+        updateFinancials('지출', amount, desc);
+        return true;
+    }
+
+    // 잔고 부족 (0 이상이지만 amount 미달) — 선택 팝업
     return trySpendSync(amount, desc);
 }
 
@@ -107,9 +113,9 @@ function trySpendSync(amount, desc) {
             for (let x = 0; x < GRID_SIZE; x++)
                 for (let y = 0; y < GRID_SIZE; y++) {
                     const t = farmGrid[x][y];
-                    if (!t.isUnlocked || (x === 12 && y === 12)) continue; // 초기 9칸 제외
+                    if (!t.isUnlocked || BASE_TILES.has(`${x},${y}`)) continue;
                     if (t.type === 0 && !t.isRotten) emptyUnlocked.push({ x, y });
-                    else if (t.isUnlocked) occ++;
+                    else occ++;
                 }
             return occ;
         })();
