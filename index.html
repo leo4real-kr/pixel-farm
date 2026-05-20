@@ -8,6 +8,48 @@
 </head>
 <body>
 
+<!-- ── 타이틀 화면 ── -->
+<div id="title-screen">
+    <div id="title-content">
+        <img id="title-image" src="images/title.png" alt="Pixel Farm"
+             onerror="this.style.display='none'">
+        <h1 id="title-logo">🌾 Pixel Farm</h1>
+        <p id="title-version">v0.1.1 α</p>
+
+        <!-- 단계 1: 시작 버튼 -->
+        <div id="title-step-1">
+            <button class="title-btn" onclick="titleNext(1)">▶ 게임 시작</button>
+        </div>
+
+        <!-- 단계 2: 이름 입력 -->
+        <div id="title-step-2" style="display:none;">
+            <p style="color:#ccc; margin-bottom:10px;">1대 가장의 이름을 입력하세요</p>
+            <input id="title-name-input" type="text" placeholder="플레이어"
+                maxlength="10"
+                style="background:#333; color:#fff; border:1px solid #666;
+                       padding:8px 14px; font-size:15px; border-radius:6px;
+                       text-align:center; width:180px; margin-bottom:12px;">
+            <br>
+            <button class="title-btn" onclick="titleNext(2)">→ 다음</button>
+        </div>
+
+        <!-- 단계 3: 조작법 안내 -->
+        <div id="title-step-3" style="display:none;">
+            <div id="title-guide">
+                <p>🖱️ <b>클릭</b> — 타일 조작 (심기 / 수확 / 물주기 등)</p>
+                <p>📦 <b>영토 확장</b> — 잠긴 타일 클릭으로 개간 ($100)</p>
+                <p>🌱 <b>씨앗 선택</b> → 빈 타일 클릭으로 심기</p>
+                <p>💰 <b>수확</b>으로 돈 벌고 가족을 부양하세요</p>
+                <p>👨‍👩‍👧 <b>결혼·출산·승계</b>로 3대 명문가를 일궈보세요</p>
+                <p style="color:#888; font-size:11px; margin-top:10px;">
+                    📱 모바일: 스와이프로 농장 이동 / 탭으로 조작
+                </p>
+            </div>
+            <button class="title-btn" onclick="startGame()">🌾 농장 시작!</button>
+        </div>
+    </div>
+</div>
+
 <div id="main-layout">
     <div id="dice-overlay">
         <h2 id="dice-title" style="color: #ff9800; margin: 0;">🎲 가족 확장 주사위 이벤트 🎲</h2>

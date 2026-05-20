@@ -268,18 +268,42 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
+// ── 타이틀 화면 제어 ────────────────────────────────
+function titleNext(step) {
+    if (step === 1) {
+        document.getElementById('title-step-1').style.display = 'none';
+        document.getElementById('title-step-2').style.display = 'block';
+        setTimeout(() => document.getElementById('title-name-input').focus(), 100);
+    } else if (step === 2) {
+        const nameInput = document.getElementById('title-name-input').value.trim();
+        playerName = nameInput || '플레이어';
+        document.getElementById('title-step-2').style.display = 'none';
+        document.getElementById('title-step-3').style.display = 'block';
+    }
+}
+
+// 이름 입력창에서 Enter 키
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('title-name-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') titleNext(2);
+    });
+});
+
+function startGame() {
+    document.getElementById('title-screen').style.display = 'none';
+    updateFamilyUI();
+    updateFinancials('수입', 0, '회계 장부 개설');
+    updateUnlockedCountDisplay();
+    renderToolShop();
+    setGameSpeed(1);
+    animate();
+}
+
 // ── 초기 실행 ────────────────────────────────────────
 (function init() {
     preloadImages(() => {
         resizeCanvas();
         centerViewOn(Math.floor(GRID_SIZE / 2), Math.floor(GRID_SIZE / 2));
-        let name = prompt('🌾 Pixel Farm에 오신 것을 환영합니다!\n\n1대 가장의 이름을 입력해 주세요:', '플레이어');
-        playerName = (name && name.trim()) ? name.trim() : '플레이어';
-        updateFamilyUI();
-        updateFinancials('수입', 0, '회계 장부 개설');
-        updateUnlockedCountDisplay();
-        renderToolShop();
-        setGameSpeed(1);
-        animate();
+        // 타이틀 화면이 먼저 표시되고 startGame()에서 게임 시작
     });
 })();
