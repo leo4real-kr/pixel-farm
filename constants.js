@@ -74,7 +74,18 @@ const TOOL_SHOP = {
     pesticideArea: { label: '광역 농약분무기',price: 600, maxDur: 12, emoji: '🧪' },
 };
 
-// ── 계절 전용 작물 정의 ──────────────────────────────
+// ── SS급 배우자 관련 ─────────────────────────────────
+let festivalCount    = 0;     // 마을 축제 참가 횟수 (조앤 조건)
+let harvestTypeSet   = new Set(); // 수확한 작물 종류 (스칼렛 조건)
+let totalHarvestCount = 0;   // 누적 수확 횟수 (스칼렛 조건)
+let sellBonusPct     = 0;    // 판매가 보너스 % (스칼렛 스킬)
+let loanLimitBonus   = 0;    // 대출 한도 추가 보너스
+let ssSpouse         = '';   // SS급 배우자 이름 ('베아트리체'|'조앤'|'스칼렛'|'')
+let nobleEnding      = false; // 귀족 승격 엔딩 조건 (베아트리체 아들 출산)
+let ssMarriageEventFired = { beatrice: false, joan: false, scarlet: false };
+
+// 동적 대출 한도 (loanLimitBonus 반영)
+function getLoanLimit() { return LOAN_LIMIT + loanLimitBonus; }
 // type: 6~11 (기존 1~5 이후)
 const SEASONAL_CROPS = {
     6:  { name: '튤립',    season: '봄',  cost: 40,  value: 120, growth: 20, emoji: '🌷', special: null },

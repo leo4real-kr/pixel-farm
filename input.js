@@ -101,7 +101,7 @@ canvas.addEventListener('click', function(event) {
     if (currentTool === 'expand') {
         if (!tile.isUnlocked) {
             const debt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-            if (debt + 100 > LOAN_LIMIT) {
+            if (debt + 100 > getLoanLimit()) {
                 alert('🚨 한도 초과: 부채 제한으로 인해 더 이상 영토를 확장할 수 없습니다.');
                 return;
             }
@@ -162,7 +162,7 @@ canvas.addEventListener('click', function(event) {
         }
 
         const debt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-        if (debt + seed.cost > LOAN_LIMIT) {
+        if (debt + seed.cost > getLoanLimit()) {
             alert('🚨 금융 한도 초과로 씨앗을 구매할 수 없습니다.');
             return;
         }
@@ -286,6 +286,7 @@ function handleHarvest(tile, tileX, tileY, cName) {
             updateFinancials('수입', reward, `가을 사과 누적 보너스 수확 (${tile.treeHarvestCount}회차)`);
             addHarvestLog(`사과나무(${tile.treeHarvestCount}회차)`, reward);
             tile.progress = 0;
+            tile.treeHarvested = true; // _6 수확 후 이미지 표시용
             return `사과를 수확하여 $${reward}을 획득했습니다! (나무 숙련도 상승)`;
         }
         return '아직 사과가 열리지 않았습니다. (가을에 수확 가능)';
@@ -298,12 +299,17 @@ function handleHarvest(tile, tileX, tileY, cName) {
         return `🗑️ 부패 작물 제거 완료. 원인: ${cause}`;
     }
     if (tile.progress >= 100) {
-        const r = getCropValue(tile.type);
+        const base  = getCropValue(tile.type);
+        const bonus = sellBonusPct > 0 ? Math.floor(base * sellBonusPct / 100) : 0;
+        const r     = base + bonus;
         clearTile(tile);
         playSound('harvest');
-        updateFinancials('수입', r, `${cName} 시장 출하`);
+        updateFinancials('수입', r, `${cName} 시장 출하${bonus > 0 ? ` (+${sellBonusPct}% 스칼렛 보너스)` : ''}`);
         addHarvestLog(cName, r);
-        return `수확 성공: +$${r}`;
+        // 스칼렛 조건 추적
+        totalHarvestCount++;
+        harvestTypeSet.add(tile.type);
+        return `수확 성공: +$${r}${bonus > 0 ? ` (보너스 +$${bonus})` : ''}`;
     }
     return null;
 }
@@ -318,7 +324,7 @@ function renderToolShop() {
         const owned = dur >= 0;
         const empty = dur === 0;
         const debt  = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-        const canBuy = debt + shop.price <= LOAN_LIMIT;
+        const canBuy = debt + shop.price <= getLoanLimit();
 
         const durBar = owned
             ? `<span style="color:${empty?'#ff5252':dur<=3?'#ff9800':'#4ff3a6'};">내구도: ${dur}/${shop.maxDur}회</span>`
@@ -344,7 +350,7 @@ function buyAreaTool(key) {
     const shop = TOOL_SHOP[key];
     if (!shop) return;
     const debt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-    if (debt + shop.price > LOAN_LIMIT) {
+    if (debt + shop.price > getLoanLimit()) {
         alert('🚨 금융 한도 초과로 구매할 수 없습니다.');
         return;
     }

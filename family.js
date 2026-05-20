@@ -1,3 +1,113 @@
+// ── SS급 배우자 조건 체크 ────────────────────────────
+function checkSSMarriage() {
+    if (hasSpouse) return;
+
+    // 베아트리체 조건: 3대 이상 + absoluteDays 300+ + 미혼
+    if (generation >= 3 && absoluteDays >= 300 && !ssMarriageEventFired.beatrice) {
+        ssMarriageEventFired.beatrice = true;
+        triggerSSEvent('beatrice');
+        return;
+    }
+
+    // 조앤 조건: 잔고 $8,000+ + 개간 100칸+ + 마을축제 3회+ + 미혼
+    const unlockedCount = (() => {
+        let cnt = 0;
+        for (let x = 0; x < GRID_SIZE; x++)
+            for (let y = 0; y < GRID_SIZE; y++)
+                if (farmGrid[x][y].isUnlocked) cnt++;
+        return cnt;
+    })();
+    if (money >= 8000 && unlockedCount >= 100 && festivalCount >= 3 && !ssMarriageEventFired.joan) {
+        ssMarriageEventFired.joan = true;
+        triggerSSEvent('joan');
+        return;
+    }
+
+    // 스칼렛 조건: 누적 수확 100회+ + 7종 이상 + 잔고 $10,000+
+    if (totalHarvestCount >= 100 && harvestTypeSet.size >= 7 && money >= 10000 && !ssMarriageEventFired.scarlet) {
+        ssMarriageEventFired.scarlet = true;
+        triggerSSEvent('scarlet');
+        return;
+    }
+}
+
+function triggerSSEvent(type) {
+    setGameSpeed(0);
+    currentDiceEvent = `ss_${type}`;
+
+    const info = {
+        beatrice: {
+            title: '🌹 운명적 만남 — 베아트리체',
+            desc: '귀족 가문의 여식 베아트리체가 길을 잃고 농장에 들렀습니다.\n주사위 2개 합계 12 (더블 6)만 성공!',
+            dice: 2, need: 12, exact: true,
+        },
+        joan: {
+            title: '🌸 마을 축제 대상 — 조앤',
+            desc: '지역 유지의 여식 조앤이 최고 농부로 선발된 당신에게 관심을 보입니다.\n주사위 3개 합계 15 이상만 성공!',
+            dice: 3, need: 15, exact: false,
+        },
+        scarlet: {
+            title: '💎 농업 대회 우승 — 스칼렛',
+            desc: '지역 상인의 여식 스칼렛이 대회 우승자에게 인사를 건넵니다.\n주사위 3개 합계 16 이상만 성공!',
+            dice: 3, need: 16, exact: false,
+        },
+    }[type];
+
+    const overlay = document.getElementById('dice-overlay');
+    overlay.style.display = 'flex';
+    document.getElementById('dice-title').innerText = info.title;
+    document.getElementById('dice-desc').innerText  = info.desc;
+    document.getElementById('dice-result').innerText = '주사위를 굴리는 중...';
+    document.getElementById('dice-result').style.color = '#FFD700';
+
+    // 3번째 주사위 표시
+    const dice3El = document.getElementById('dice3');
+    if (dice3El) dice3El.style.display = info.dice === 3 ? 'flex' : 'none';
+
+    setTimeout(() => {
+        const rolls = Array.from({ length: info.dice }, () => Math.floor(Math.random() * 6) + 1);
+        const total = rolls.reduce((a, b) => a + b, 0);
+        document.getElementById('dice1').innerText = rolls[0];
+        document.getElementById('dice2').innerText = rolls[1];
+        if (info.dice === 3 && dice3El) dice3El.innerText = rolls[2];
+
+        const resultEl = document.getElementById('dice-result');
+        const success  = info.exact ? total === info.need : total >= info.need;
+
+        if (success) {
+            hasSpouse  = true;
+            spouseGrade = 'SS';
+            ssSpouse   = type;
+
+            if (type === 'beatrice') {
+                spouseName = '베아트리체';
+                money += 15000;
+                loanLimitBonus = 5000;
+                resultEl.innerText = `👑 성공! 합계 ${total} — 베아트리체와 결혼! +$15,000, 대출 한도 +$5,000!`;
+            } else if (type === 'joan') {
+                spouseName = '조앤';
+                money += 10000;
+                loanLimitBonus = 3000;
+                resultEl.innerText = `🌸 성공! 합계 ${total} — 조앤과 결혼! +$10,000, 대출 한도 +$3,000, 자동 급수/배수!`;
+            } else if (type === 'scarlet') {
+                spouseName = '스칼렛';
+                money += 3000;
+                loanLimitBonus = 2000;
+                sellBonusPct = 10;
+                resultEl.innerText = `💎 성공! 합계 ${total} — 스칼렛과 결혼! +$3,000, 판매가 영구 +10%, 대출 한도 +$2,000!`;
+            }
+
+            resultEl.style.color = '#FFD700';
+            addSysLog(`👑 SS급 배우자 '${spouseName}' 합류!`);
+            updateFamilyUI();
+        } else {
+            resultEl.innerText = `😭 실패! 합계 ${total} — 인연이 닿지 않았습니다.`;
+            resultEl.style.color = '#ff5252';
+            // SS급은 한 번만 시도 가능 (이미 fired = true)
+        }
+    }, 1200);
+}
+
 // ── 주사위 이벤트 ────────────────────────────────────
 function triggerDiceEvent(eventType) {
     setGameSpeed(0);
@@ -90,17 +200,67 @@ function handleBirth() {
     setGameSpeed(0);
 
     const defaultName = ['첫째', '둘째', '셋째'][children.length] || '막내';
-    let name = prompt(
-        `🎉 부인 ${spouseName} 님이 무사히 출산했습니다!\n새로운 후계자의 이름을 지어주세요:`,
-        defaultName
-    );
-    if (!name || !name.trim()) name = defaultName;
 
-    children.push({ name, grade: spouseGrade, age: 1, actionText: '대기 중' });
-    pregnancyCooldown = 120; // 출산 후 120일 쿨다운
-    alert(`👶 ${generation + 1}대 ${name} (이)가 가문에 합류했습니다! [유전 등급: ${spouseGrade}급]\n(다음 임신 시도는 120일 후 가능합니다)`);
-    setGameSpeed(1);
-    updateFamilyUI();
+    // 커스텀 이름 입력 모달
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position:fixed; top:0; left:0; width:100vw; height:100vh;
+        background:rgba(0,0,0,0.85); display:flex; justify-content:center;
+        align-items:center; z-index:9999;
+    `;
+    modal.innerHTML = `
+        <div style="background:#1e2e1e; border:2px solid #4a8a2a; border-radius:12px;
+                    padding:28px 32px; text-align:center; max-width:320px; width:90%;">
+            <div style="font-size:28px; margin-bottom:8px;">🎉</div>
+            <div style="font-size:15px; color:#d4f0a0; font-weight:bold; margin-bottom:6px;">
+                부인 ${spouseName} 님이 출산했습니다!
+            </div>
+            <div style="font-size:12px; color:#888; margin-bottom:16px;">
+                [유전 등급: ${spouseGrade}급]
+            </div>
+            <div style="font-size:13px; color:#ccc; margin-bottom:8px;">
+                새로운 후계자의 이름을 지어주세요
+            </div>
+            <input id="birth-name-input" type="text" placeholder="${defaultName}"
+                maxlength="8"
+                style="background:#333; color:#fff; border:1px solid #666;
+                       padding:8px 14px; font-size:15px; border-radius:6px;
+                       text-align:center; width:160px; margin-bottom:16px;">
+            <br>
+            <button id="birth-confirm-btn" class="title-btn"
+                style="padding:10px 28px; font-size:14px;">
+                👶 이름 짓기
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const input = modal.querySelector('#birth-name-input');
+    const btn   = modal.querySelector('#birth-confirm-btn');
+
+    setTimeout(() => input.focus(), 100);
+
+    const confirm = () => {
+        const name = input.value.trim() || defaultName;
+        document.body.removeChild(modal);
+        children.push({ name, grade: spouseGrade, age: 1, actionText: '대기 중' });
+        pregnancyCooldown = 120;
+
+        // 베아트리체 귀족 엔딩 조건 — 아들 출산
+        if (ssSpouse === 'beatrice') {
+            nobleEnding = true;
+            alert(`👑 ${generation + 1}대 '${name}' 탄생!\n베아트리체 가문의 혈통이 이어졌습니다.\n귀족 작위 수여 엔딩이 발동됩니다!`);
+        } else {
+            alert(`👶 ${generation + 1}대 '${name}' (이)가 가문에 합류했습니다!\n[유전 등급: ${spouseGrade}급]\n(다음 임신 시도는 120일 후 가능합니다)`);
+        }
+
+        addSysLog(`👶 ${name} 출생! [${spouseGrade}급 유전]`);
+        setGameSpeed(1);
+        updateFamilyUI();
+    };
+
+    btn.addEventListener('click', confirm);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); });
 }
 
 // ── 가업 승계 ────────────────────────────────────────
@@ -131,7 +291,7 @@ function succeedFarm(childIndex) {
     spouseActionText = '대기 중';
     children = [];
 
-    absoluteDays = 1; gameDays = 1;
+    gameDays = 1; // gameDays만 리셋 (absoluteDays는 유지 — 가문단절 엔딩 카운트)
     currentSeason = '봄'; currentWeather = '맑음';
 
     // 유산금 지급
@@ -173,6 +333,35 @@ function runFamilyActions(dryTiles, weedTiles, ripeTiles, rottenTiles) {
 
     // 배우자 행동 — 등급별 횟수 + 고유 스킬
     if (hasSpouse) {
+        // SS급 조앤 — 자동 급수/배수 (수분 50~70 유지)
+        if (ssSpouse === 'joan') {
+            for (let x = 0; x < GRID_SIZE; x++)
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const t = farmGrid[x][y];
+                    if (!t.isUnlocked) continue;
+                    if (t.water < 50) t.water = Math.min(70, t.water + 20);
+                    if (t.water > 70) t.water = Math.max(50, t.water - 20);
+                }
+            spouseActionText = '💧 조앤: 자동 급수/배수 중';
+            return spouseSkillCut;
+        }
+
+        // SS급 베아트리체 — S급 스킬 + 병충해 전체 제거
+        if (ssSpouse === 'beatrice') {
+            for (let x = 0; x < GRID_SIZE; x++)
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const t = farmGrid[x][y];
+                    if (t.isUnlocked && t.hasPest) { t.hasPest = false; t.pestDays = 0; }
+                }
+            spouseActionText = '👑 베아트리체: 병충해 전체 제거 중';
+            return spouseSkillCut;
+        }
+
+        // SS급 스칼렛 — 기본 S급 행동 (판매가 보너스는 수확 시 적용)
+        if (ssSpouse === 'scarlet') {
+            spouseActionText = '💎 스칼렛: 농장 감독 중 (+10% 판매가)';
+        }
+
         const roll = Math.random();
 
         // 등급별 기본 행동 횟수
@@ -227,7 +416,7 @@ function runFamilyActions(dryTiles, weedTiles, ripeTiles, rottenTiles) {
             });
         } else if (roll < 0.5 && weedTiles.length > 0) {
             spouseActionText = `✂️ 잡초 제거 중 [${spouseGrade}급]`;
-            weedTiles.slice(0, waterCount).forEach(t => { t.hasWeed = false; });
+            weedTiles.splice(0, waterCount).forEach(t => { t.hasWeed = false; });
         } else if (roll < 0.75 && dryTiles.length > 0) {
             spouseActionText = `💧 살수 중 [${spouseGrade}급 ×${waterCount}]`;
             dryTiles.slice(0, waterCount).forEach(t => { t.water = Math.min(90, t.water + 40); });
@@ -246,17 +435,17 @@ function runFamilyActions(dryTiles, weedTiles, ripeTiles, rottenTiles) {
 
         if (child.age <= 15) {
             child.actionText = `👶 유아기(${child.age}일) - 급수 보조 [-$15/일]`;
-            dryTiles.slice(0, workCount).forEach(t => { t.water = Math.min(90, t.water + waterAmt); });
+            dryTiles.splice(0, workCount).forEach(t => { t.water = Math.min(90, t.water + waterAmt); });
         } else if (child.age <= 30) {
             child.actionText = `👦 성장기(${child.age}일) - 급수+제초 [-$25/일]`;
-            dryTiles.slice(0, workCount).forEach(t => { t.water = Math.min(90, t.water + waterAmt); });
-            weedTiles.slice(0, workCount).forEach(t => { t.hasWeed = false; });
+            dryTiles.splice(0, workCount).forEach(t => { t.water = Math.min(90, t.water + waterAmt); });
+            weedTiles.splice(0, workCount).forEach(t => { t.hasWeed = false; });
         } else {
             child.actionText = `🚜 청년기(${child.age}일) - 전담 보조`;
             adultCount++;
-            dryTiles.slice(0, workCount).forEach(t => { t.water = Math.min(90, t.water + waterAmt); });
-            weedTiles.slice(0, workCount).forEach(t => { t.hasWeed = false; });
-            rottenTiles.slice(0, workCount).forEach(t => { clearTile(t); });
+            dryTiles.splice(0, workCount).forEach(t => { t.water = Math.min(90, t.water + waterAmt); });
+            weedTiles.splice(0, workCount).forEach(t => { t.hasWeed = false; });
+            rottenTiles.splice(0, workCount).forEach(t => { clearTile(t); });
         }
     });
 

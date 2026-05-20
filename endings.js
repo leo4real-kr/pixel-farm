@@ -25,6 +25,10 @@ function triggerEnding(type) {
             title: '💰 억만장자 엔딩',
             msg: `모든 빚을 청산하고 순수 보유 자금 $${money.toLocaleString()}을 달성했습니다!\n\n${generation}대 ${playerName} 가문은 이 지역 최고의 부농으로 이름을 남겼습니다.`
         },
+        noble: {
+            title: '👑 귀족 승격 엔딩',
+            msg: `${playerName} 가문이 베아트리체 가문과의 혼인으로 귀족 작위를 받았습니다.\n\n3대에 걸친 농부의 땀이 마침내 귀족의 문을 열었습니다.\n\n전설적인 엔딩을 달성하셨습니다! 🎊`
+        },
         dynasty: {
             title: '👨‍👩‍👧‍👦 명문가 엔딩',
             msg: `${playerName} 가문이 3대에 걸쳐 가업을 이어왔습니다.\n3대 가주는 혹독한 첫 1년을 버텨내며 가문의 이름을 지켜냈습니다.\n\n1대부터 3대까지, 이 농장의 역사는 곧 이 지역의 역사가 되었습니다.\n\n최고의 엔딩을 달성하셨습니다! 🎉`
@@ -40,3 +44,4 @@ function triggerEnding(type) {
 
 // ── 엔딩 조건 체크는 main.js tick()에서 직접 처리 ───
 // checkEndings 함수 제거 — 중복 로직 일원화
+

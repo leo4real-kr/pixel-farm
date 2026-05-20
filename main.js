@@ -67,15 +67,16 @@ function tick() {
                         // 봄 진입 — 꽃나무 단계 (2년차 이후)
                         if (t.treeHarvestCount > 0) {
                             t.progress = 30;
+                            t.treeHarvested = false; // 수확 플래그 초기화
                             addSysLog('🌸 사과나무에 꽃이 피었습니다!');
                         }
                     } else if (gameDays === 1) {
-                        // 봄 진입 (새 사이클) — 첫 해 나무도 봄에 꽃 피기 시작
+                        // 봄 진입 (새 사이클)
                         if (t.treeHarvestCount > 0) {
                             t.progress = 30;
+                            t.treeHarvested = false; // 수확 플래그 초기화
                             addSysLog('🌸 사과나무에 꽃이 피었습니다!');
                         } else {
-                            // 첫 해 봄 → 어린 나무 성장 계속
                             t.progress = Math.min(t.progress + 20, 90);
                         }
                     }
@@ -219,7 +220,7 @@ function tick() {
 
     // 11. 엔딩 판정 (파산/억만장자/단절)
     const totalDebt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-    if (totalDebt >= LOAN_LIMIT) { triggerEnding('bankruptcy'); return; }
+    if (totalDebt >= getLoanLimit()) { triggerEnding('bankruptcy'); return; }
     if (fixedLoanAmount === 0 && money > 0 && money >= BILLIONAIRE_GOAL) { triggerEnding('billionaire'); return; }
     if (absoluteDays >= RETIRE_DAY && !children.some(c => c.age >= 31)) {
         triggerEnding('extinction'); return;
@@ -233,6 +234,12 @@ function tick() {
         money >= 3000 && unlockedCount >= 20) {
         triggerDiceEvent('marriage');
     }
+
+    // SS급 배우자 조건 체크 (매 10일)
+    if (absoluteDays % 10 === 0 && !hasSpouse) checkSSMarriage();
+
+    // 베아트리체 귀족 엔딩 — 아들 출산 시 발동
+    if (nobleEnding) { triggerEnding('noble'); return; }
 
     // 13. 자동 저장 (매 5일)
     if (gameDays % 5 === 0) autoSave();
@@ -248,6 +255,9 @@ function resetGame(forceReset = false) {
     money = 1000; totalRevenue = 0; totalExpense = 0; fixedLoanAmount = 0;
     gameDays = 1; absoluteDays = 1; fullUnlockDay = -1; dynastyStartDay = -1;
     mortgageActive = false; mortgageDaysLeft = 120; mortgageAmount = 0;
+    ssSpouse = ''; loanLimitBonus = 0; sellBonusPct = 0; nobleEnding = false;
+    festivalCount = 0; totalHarvestCount = 0; harvestTypeSet = new Set();
+    ssMarriageEventFired = { beatrice: false, joan: false, scarlet: false };
     generation = 1; endingFired = false;
     currentSeason = '봄'; currentWeather = '맑음'; currentTool = 'select';
     hasSpouse = false; spouseName = ''; spouseGrade = 'C';

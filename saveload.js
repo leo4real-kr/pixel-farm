@@ -11,6 +11,10 @@ function buildSaveData() {
         // 기본 상태
         money, gameDays, absoluteDays, fullUnlockDay, dynastyStartDay,
         mortgageActive, mortgageDaysLeft, mortgageAmount,
+        ssSpouse, loanLimitBonus, sellBonusPct, nobleEnding,
+        festivalCount, totalHarvestCount,
+        harvestTypeSet: [...harvestTypeSet],
+        ssMarriageEventFired,
         currentSeason, currentWeather,
         totalRevenue, totalExpense, fixedLoanAmount,
         endingFired,
@@ -56,6 +60,14 @@ function applySaveData(d) {
     mortgageActive   = d.mortgageActive   ?? false;
     mortgageDaysLeft = d.mortgageDaysLeft ?? 120;
     mortgageAmount   = d.mortgageAmount   ?? 0;
+    ssSpouse         = d.ssSpouse         ?? '';
+    loanLimitBonus   = d.loanLimitBonus   ?? 0;
+    sellBonusPct     = d.sellBonusPct     ?? 0;
+    nobleEnding      = d.nobleEnding      ?? false;
+    festivalCount    = d.festivalCount    ?? 0;
+    totalHarvestCount = d.totalHarvestCount ?? 0;
+    harvestTypeSet   = new Set(d.harvestTypeSet ?? []);
+    ssMarriageEventFired = d.ssMarriageEventFired ?? { beatrice: false, joan: false, scarlet: false };
     currentSeason  = d.currentSeason;
     currentWeather = d.currentWeather;
     totalRevenue   = d.totalRevenue;
@@ -158,6 +170,7 @@ function loadFromSlot(slotIndex) {
         setGameSpeed(0);
         if (!applySaveData(d)) return;
         refreshAllUI();
+        if (!gameInterval) animate(); // 애니메이션이 멈춰있으면 재시작
         setGameSpeed(1);
     } catch(e) {
         alert('불러오기 실패: ' + e.message);
@@ -216,6 +229,12 @@ function renderSavePanel() {
     const panel = document.getElementById('save-panel-body');
     if (!panel) return;
 
+    const notice = `<div style="font-size:10px; color:#666; margin-bottom:6px; line-height:1.5;">
+        ⚠️ 세이브 파일은 이 브라우저에만 저장됩니다.<br>
+        브라우저가 바뀌면 저장 파일을 찾을 수 없어요.<br>
+        다른 기기에서 이어하려면 <b style="color:#aaa;">JSON 내보내기</b>를 이용하세요.
+    </div>`;
+
     const allSlots = [
         { index: 0, key: SAVE_AUTO, label: '🔄 자동 저장' },
         { index: 1, key: SAVE_SLOTS[0], label: '💾 슬롯 1' },
@@ -223,7 +242,7 @@ function renderSavePanel() {
         { index: 3, key: SAVE_SLOTS[2], label: '💾 슬롯 3' },
     ];
 
-    panel.innerHTML = allSlots.map(slot => {
+    panel.innerHTML = notice + allSlots.map(slot => {
         const meta = getSlotMeta(slot.key);
         const info = meta
             ? `<span style="color:#aaa;font-size:10px;">${meta.savedAt}<br>${meta.generation}대 ${meta.playerName} | ${meta.season} ${meta.day}일 | $${meta.money}</span>`

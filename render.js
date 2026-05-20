@@ -344,9 +344,9 @@ function drawCrop(tile, cx, cy, tileSz = TILE_SIZE) {
                 else if (currentSeason === '여름') stage = 4;
                 else {
                     // 가을
-                    if (tile.progress >= 100) stage = 5;
-                    else if (tile.progress === 0) stage = 6; // 수확 직후
-                    else stage = 4;
+                    if (tile.treeHarvested) stage = 6;        // 수확 완료 후
+                    else if (tile.progress >= 100) stage = 5; // 수확 가능
+                    else stage = 4;                           // 성장 중
                 }
             }
         } else {
@@ -438,17 +438,25 @@ function updateFamilyUI() {
 
     if (hasSpouse) {
         const action = isPregnant ? spouseActionText : `${spouseActionText}`;
-        const gradeColor = spouseGrade === 'S' ? '#FFD700' : spouseGrade === 'A' ? '#4ff3a6' : spouseGrade === 'B' ? '#64b5f6' : '#aaa';
-        const skillDesc = {
+        const gradeColor = spouseGrade === 'SS' ? '#ff8c00'
+                         : spouseGrade === 'S'  ? '#FFD700'
+                         : spouseGrade === 'A'  ? '#4ff3a6'
+                         : spouseGrade === 'B'  ? '#64b5f6' : '#aaa';
+        const skillDesc = spouseGrade === 'SS' ? {
+            beatrice: '병충해 전체 제거 / 명문가 엔딩 완화 / 귀족 승격 엔딩',
+            joan:     '자동 급수·배수 (수분 50~70 유지)',
+            scarlet:  '판매가 +10% 영구 / S급 행동',
+        }[ssSpouse] || 'SS급 스킬' : {
             S: '병충해 자동 탐지·제거 / 출하×5',
             A: '3x3 광역 수확 / 출하×3',
             B: '출하×2 / 살수×2',
             C: '출하×1 / 살수×1'
         }[spouseGrade];
+        const gradeTag = spouseGrade === 'SS' ? `👑 SS급 — ${spouseName}` : `[${spouseGrade}급]`;
         html += `<div class="member-row">👰 부인 ${spouseName}:
             <span class="member-status status-work" style="background:#ad1457;font-size:10px;">${action}</span>
         </div>
-        <div style="font-size:10px;color:${gradeColor};margin:-2px 0 4px 18px;">[${spouseGrade}급] ${skillDesc}</div>`;
+        <div style="font-size:10px;color:${gradeColor};margin:-2px 0 4px 18px;">${gradeTag} ${skillDesc}</div>`;
     }
 
     children.forEach((child, i) => {
