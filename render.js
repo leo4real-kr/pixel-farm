@@ -269,14 +269,31 @@ function drawGame() {
     // 모바일 뷰포트 이동 버튼 (화살표)
     if (isMobile) {
         const cs = canvas.width;
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        if (viewOffsetY > 0)             { ctx.fillText('▲', cs/2, 18); }
-        if (viewOffsetY < GRID_SIZE - MOBILE_VIEW) { ctx.fillText('▼', cs/2, cs-18); }
-        if (viewOffsetX > 0)             { ctx.fillText('◀', 18, cs/2); }
-        if (viewOffsetX < GRID_SIZE - MOBILE_VIEW) { ctx.fillText('▶', cs-18, cs/2); }
+        const mid = cs / 2;
+
+        function drawArrow(text, x, y) {
+            // 배경 원
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.beginPath();
+            ctx.arc(x, y, 22, 0, Math.PI * 2);
+            ctx.fill();
+            // 테두리
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+            // 화살표 텍스트
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x, y + 1);
+        }
+
+        if (viewOffsetY > 0)                          drawArrow('▲', mid,    28);
+        if (viewOffsetY < GRID_SIZE - MOBILE_VIEW)    drawArrow('▼', mid,    cs - 28);
+        if (viewOffsetX > 0)                          drawArrow('◀', 28,     mid);
+        if (viewOffsetX < GRID_SIZE - MOBILE_VIEW)    drawArrow('▶', cs - 28, mid);
     }
 }
 
