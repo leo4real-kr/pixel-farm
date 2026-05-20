@@ -269,3 +269,104 @@ canvas {
     border-radius: 4px; margin-top: 15px; font-weight: bold;
 }
 .popup-btn:hover { background: #e65100; }
+/* ── 모바일 반응형 ─────────────────────────────────── */
+#canvas-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+@media (max-width: 900px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        align-items: flex-start;
+    }
+
+    #main-layout {
+        flex-direction: column;
+        width: 100vw;
+        height: auto;
+        border-radius: 0;
+        border: none;
+        overflow-y: auto;
+    }
+
+    #left-panel {
+        border-right: none;
+        border-bottom: 3px solid #444;
+        padding: 8px;
+        overflow: visible;
+    }
+
+    h1 { font-size: 15px; margin-bottom: 6px; }
+
+    #top-hud {
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .hud-item { font-size: 11px; }
+
+    #canvas-container {
+        height: 55vw;
+        min-height: 260px;
+        max-height: 420px;
+    }
+
+    /* 캔버스 자동 스케일 */
+    #farmCanvas {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        touch-action: none;
+    }
+
+    /* 컨트롤 + 알림 세로 배치 */
+    #control-board-wrapper {
+        flex-direction: column !important;
+    }
+
+    #info-panel {
+        width: 100% !important;
+        height: 120px !important;
+    }
+
+    .shop-btn {
+        padding: 8px 10px;
+        font-size: 12px;
+        min-height: 36px;
+    }
+
+    .time-btn {
+        padding: 8px 10px;
+        font-size: 12px;
+        min-height: 36px;
+    }
+
+    #right-panel {
+        width: 100%;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .tab-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    #top-hud { gap: 2px; }
+    .hud-item { font-size: 10px; }
+    h1 { font-size: 13px; }
+
+    .shop-btn {
+        padding: 9px 8px;
+        font-size: 11px;
+    }
+}
