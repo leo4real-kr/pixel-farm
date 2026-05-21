@@ -144,7 +144,7 @@ function resolveEncounter(id, choiceIdx, diceTotal) {
     const result = choice.resolve(diceTotal);
 
     // 1회성 이벤트 기록 — resolve 완료 후 세팅 (trySpend 실패 시 소진 방지)
-    if (enc.once && result !== '자금 부족!') firedOnce.add(enc.id);
+    if (enc.once && result && result !== '자금 부족!') firedOnce.add(enc.id);
 
     // 모달 제거
     const modal = document.getElementById('encounter-modal');
@@ -171,8 +171,6 @@ function processEncounterEffects() {
             marketBonus = 0;
             addSysLog('📋 시장 가격 변동 효과 종료.');
         }
-    } else {
-        marketBonus = 0; // 혹시 남은 음수 보너스 초기화
     }
     // marketBonus 상하한 클램프 (-30% ~ +50%)
     marketBonus = Math.max(-30, Math.min(50, marketBonus));

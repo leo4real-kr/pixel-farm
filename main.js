@@ -241,8 +241,8 @@ function tick() {
         triggerDiceEvent('marriage');
     }
 
-    // SS급 배우자 조건 체크 (매 10일)
-    if (absoluteDays % 10 === 0 && !hasSpouse) checkSSMarriage();
+    // SS급 배우자 조건 체크 (매 10일) — 일반 결혼 이벤트와 중복 방지
+    if (absoluteDays % 10 === 0 && !hasSpouse && !marriageEventFired) checkSSMarriage();
 
     // 베아트리체 귀족 엔딩 — 아들 출산 시 발동
     if (nobleEnding) { triggerEnding('noble'); return; }

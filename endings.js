@@ -11,7 +11,7 @@ function triggerEnding(type) {
     const endings = {
         bankruptcy: {
             title: '🏦 금융 파산 엔딩',
-            msg: `총 부채가 한도($${LOAN_LIMIT})를 초과했습니다.\n은행이 ${generation}대 ${playerName} 가문의 농장을 전면 압류했습니다.\n\n가문의 땅은 차갑게 경매에 넘어갔습니다.`
+            msg: `총 부채가 한도($${getLoanLimit()})를 초과했습니다.\n은행이 ${generation}대 ${playerName} 가문의 농장을 전면 압류했습니다.\n\n가문의 땅은 차갑게 경매에 넘어갔습니다.`
         },
         extinction: {
             title: '⚰️ 가문 단절 엔딩',

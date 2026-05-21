@@ -36,6 +36,7 @@ function clearTile(tile) {
     tile.overRipeDays = 0;
     tile.overWaterDays = 0;
     tile.droughtDays = 0;
+    tile.hasWeed = false;
 }
 
 // ── 영토 카운트 및 HUD 갱신 ──────────────────────────

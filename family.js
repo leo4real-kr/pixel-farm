@@ -103,7 +103,16 @@ function triggerSSEvent(type) {
         } else {
             resultEl.innerText = `😭 실패! 합계 ${total} — 인연이 닿지 않았습니다.`;
             resultEl.style.color = '#ff5252';
-            // SS급은 한 번만 시도 가능 (이미 fired = true)
+            // 닫기 버튼 추가
+            const closeBtn = document.createElement('button');
+            closeBtn.innerText = '닫기';
+            closeBtn.className = 'popup-btn';
+            closeBtn.style.marginTop = '12px';
+            closeBtn.onclick = () => {
+                overlay.style.display = 'none';
+                setGameSpeed(1);
+            };
+            resultEl.parentNode.appendChild(closeBtn);
         }
     }, 1200);
 }
