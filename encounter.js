@@ -156,23 +156,38 @@ function resolveEncounter(id, choiceIdx, diceTotal) {
     setGameSpeed(1);
 }
 
+// ── presaleActive 해제 (수확 1회 후 input.js에서 호출) ──
+function clearPresale() {
+    presaleActive = false;
+    addSysLog('🤝 선물거래 계약 완료. 이후 수확은 정상 판매됩니다.');
+}
+
 // ── 효과 틱 처리 (매 틱 호출) ────────────────────────
 function processEncounterEffects() {
-    // 시장 보너스
+    // 시장 보너스/패널티
     if (marketBonusDays > 0) {
         marketBonusDays--;
-        if (marketBonusDays === 0) { marketBonus = 0; addSysLog('📋 시장 가격 보너스 종료.'); }
+        if (marketBonusDays === 0) {
+            marketBonus = 0;
+            addSysLog('📋 시장 가격 변동 효과 종료.');
+        }
+    } else {
+        marketBonus = 0; // 혹시 남은 음수 보너스 초기화
     }
     // 지렁이 보너스
-    if (wormBonusDays > 0) wormBonusDays--;
-    else wormBonus = false;
+    if (wormBonusDays > 0) {
+        wormBonusDays--;
+        if (wormBonusDays === 0) { wormBonus = false; addSysLog('🪱 지렁이 효과 종료.'); }
+    }
 
     // 폭설 수분 동결
     if (frozenWaterDays > 0) frozenWaterDays--;
 
     // 가뭄 2배속
-    if (droughtDays > 0) droughtDays--;
-    else droughtDouble = false;
+    if (droughtDays > 0) {
+        droughtDays--;
+        if (droughtDays === 0) { droughtDouble = false; addSysLog('☀️ 가뭄 예보 기간 종료.'); }
+    }
 
     // 황사
     if (dustDays > 0) dustDays--;
@@ -205,7 +220,7 @@ function getRandomUnlocked(count, filter) {
     for (let x = 0; x < GRID_SIZE; x++)
         for (let y = 0; y < GRID_SIZE; y++) {
             const t = farmGrid[x][y];
-            if (t.isUnlocked && (!filter || filter(t))) tiles.push({ t, x, y });
+            if (t.isUnlocked && (!filter || filter(t, x, y))) tiles.push({ t, x, y });
         }
     const shuffled = tiles.sort(() => Math.random() - 0.5);
     return shuffled.slice(0, count);
@@ -488,7 +503,7 @@ const ENCOUNTERS = [
         choices: [{
             label: '확인',
             resolve: () => {
-                const tiles = getRandomUnlocked(4, (t) => !BASE_TILES.has(`${t.x},${t.y}`));
+                const tiles = getRandomUnlocked(4, (t, x, y) => !BASE_TILES.has(`${x},${y}`));
                 tiles.forEach(({ t, x, y }) => {
                     farmGrid[x][y] = {
                         type: 0, progress: 0, water: 0, hasWeed: false,
@@ -517,7 +532,7 @@ const ENCOUNTERS = [
                         money += 200; updateFinancials('수입', 200, '농부 감사 보답');
                         return `주사위 ${total} — 농부가 크게 보답! +$200`;
                     }
-                    if (total >= 7) return `주사위 ${total} — 농부가 씨앗 정보를 알려줬습니다. (다음 수확 +5%)`;
+                    if (total >= 7) { marketBonus += 5; marketBonusDays = 10; return `주사위 ${total} — 농부가 씨앗 정보를 알려줬습니다. 판매가 +5% (10일)`; }
                     return `주사위 ${total} — 농부가 감사 인사만 하고 떠났습니다.`;
                 }
             },
@@ -784,7 +799,6 @@ const ENCOUNTERS = [
     {
         id: 'lottery', weight: 3, once: true, emoji: '🎰', title: '복권 당첨',
         type: 'positive', hasDice: true,
-        condition: () => Math.random() < 0.3, // 추가 발생 필터
         desc: '복권에 당첨됐습니다!\n주사위를 굴려 당첨금을 확인하세요!',
         choices: [{
             label: '확인하기', needDice: true, diceCount: 2,
@@ -844,7 +858,11 @@ const ENCOUNTERS = [
         desc: '자녀가 아파서 병원에 다녀왔습니다.\n치료비 $80이 지출됩니다.',
         choices: [{
             label: '확인',
-            resolve: () => { updateFinancials('지출', 80, '자녀 치료비'); return '치료비 -$80'; }
+            resolve: () => {
+                updateFinancials('지출', 80, '자녀 치료비');
+                addSysLog('🏥 자녀 치료비 -$80 강제 지출');
+                return '치료비 -$80';
+            }
         }]
     },
     {

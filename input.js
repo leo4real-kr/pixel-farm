@@ -315,7 +315,8 @@ function handleHarvest(tile, tileX, tileY, cName) {
             clearTile(tile);
             totalHarvestCount++;
             harvestTypeSet.add(tile.type);
-            return '선물거래 계약으로 판매 불가 (수확만 진행)';
+            clearPresale(); // 1회 수확 후 선물거래 해제
+            return '선물거래 계약으로 판매 불가 (수확만 진행, 계약 완료)';
         }
         clearTile(tile);
         playSound('harvest');
