@@ -29,6 +29,14 @@
                 transition: opacity 0.3s ease;
                 opacity: 1;
             ">
+                <div style="text-align:right; margin-bottom:6px;">
+                    <button onclick="skipOpening()"
+                        style="background:none; border:1px solid #444; color:#666;
+                               font-size:11px; cursor:pointer; padding:4px 10px;
+                               border-radius:4px;">
+                        건너뛰기 ▶▶
+                    </button>
+                </div>
                 <img id="opening-cut-img" src="" alt=""
                     style="width:100%; border-radius:8px; margin-bottom:12px;
                            border:1px solid #3a4a2a; max-height:220px; object-fit:cover;">
@@ -38,11 +46,6 @@
                            margin-bottom:12px;">
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <button onclick="skipOpening()"
-                        style="background:none; border:none; color:#555;
-                               font-size:11px; cursor:pointer; padding:4px 8px;">
-                        건너뛰기 ▶▶
-                    </button>
                     <span id="opening-progress" style="color:#555; font-size:11px;">1 / 4</span>
                     <button id="opening-next-btn" class="title-btn"
                         style="padding:8px 24px; font-size:13px;">다음 →</button>
