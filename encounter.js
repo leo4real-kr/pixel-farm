@@ -19,6 +19,9 @@ let interestModifier   = 0;      // 금리 인상/인하 임시 보정
 let interestModDays    = 0;      // 금리 보정 남은 일수
 let diceBonus          = 0;      // 다음 주사위 보너스 (배우자 생일)
 
+// ── 1회성 발동 추적 ──────────────────────────────────
+const firedOnce = new Set();
+
 // ── 인카운터 발동 체크 (매 틱 호출) ──────────────────
 function checkEncounter() {
     if (encounterActive || encounterCooldown > 0) {
@@ -26,31 +29,34 @@ function checkEncounter() {
         return;
     }
 
-    // 인카운터 발생 확률 (매 틱 기본 20%)
-    // 조상 묘소 정비 시 부정적 인카운터 -50%
-    const baseChance = 0.20;
-    if (Math.random() > baseChance) return;
+    // 기본 발생 확률 30%
+    if (Math.random() > 0.30) return;
 
-    // 발동 가능한 인카운터 목록 필터링
+    // 발동 가능한 인카운터 필터링
     const pool = ENCOUNTERS.filter(e => {
+        if (e.once && firedOnce.has(e.id)) return false;
         if (e.condition && !e.condition()) return false;
         return true;
     });
-
     if (pool.length === 0) return;
 
-    // 부정적 이벤트 확률 조정
-    let filtered = pool;
-    if (ancestorBlessing) {
-        // 긍정/중립 이벤트 2배 가중치
-        filtered = [];
-        pool.forEach(e => {
-            filtered.push(e);
-            if (e.type !== 'negative') filtered.push(e);
-        });
+    // 가중치 기반 랜덤 뽑기
+    let totalWeight = 0;
+    const weighted = pool.map(e => {
+        let w = e.weight || 10;
+        // 조상 묘소 가호: 부정적 이벤트 가중치 절반
+        if (ancestorBlessing && e.type === 'negative') w = Math.floor(w / 2);
+        totalWeight += w;
+        return { e, w };
+    });
+
+    let rand = Math.random() * totalWeight;
+    let picked = weighted[weighted.length - 1].e;
+    for (const { e, w } of weighted) {
+        rand -= w;
+        if (rand <= 0) { picked = e; break; }
     }
 
-    const picked = filtered[Math.floor(Math.random() * filtered.length)];
     fireEncounter(picked);
 }
 
@@ -134,6 +140,9 @@ function resolveEncounter(id, choiceIdx, diceTotal) {
         return;
     }
 
+    // 1회성 이벤트 기록
+    if (enc.once) firedOnce.add(enc.id);
+
     // 결과 처리
     const result = choice.resolve(diceTotal);
 
@@ -207,7 +216,7 @@ const ENCOUNTERS = [
 
     // ── 날씨/자연재해 ─────────────────────────────────
     {
-        id: 'heavy_rain', emoji: '🌧️', title: '갑작스러운 폭우',
+        id: 'heavy_rain', weight: 15, once: false, emoji: '🌧️', title: '갑작스러운 폭우',
         type: 'mixed', hasDice: false,
         desc: '갑작스러운 폭우가 쏟아집니다!\n전체 작물 수분이 크게 올랐지만 과수분 위험이 있습니다.',
         choices: [{
@@ -219,7 +228,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'drought_warning', emoji: '☀️', title: '가뭄 예보',
+        id: 'drought_warning', weight: 12, once: false, emoji: '☀️', title: '가뭄 예보',
         type: 'negative', hasDice: false,
         desc: '앞으로 한동안 비가 오지 않을 것 같습니다.\n수분 감소 속도가 2배로 빨라집니다. (20일)',
         choices: [{
@@ -228,7 +237,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'hail', emoji: '🌨️', title: '우박',
+        id: 'hail', weight: 12, once: false, emoji: '🌨️', title: '우박',
         type: 'negative', hasDice: false,
         desc: '우박이 작물을 강타합니다!\n랜덤 3~5칸의 작물이 피해를 입었습니다.',
         choices: [{
@@ -242,7 +251,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'frost', emoji: '🥶', title: '서리',
+        id: 'frost', weight: 10, once: false, emoji: '🥶', title: '서리',
         type: 'negative', hasDice: false,
         condition: () => currentSeason === '봄' || currentSeason === '가을',
         desc: '밤 사이 서리가 내렸습니다!\n냉해에 취약한 작물이 피해를 입었습니다.',
@@ -256,7 +265,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'rainbow', emoji: '🌈', title: '무지개',
+        id: 'rainbow', weight: 5, once: false, emoji: '🌈', title: '무지개',
         type: 'positive', hasDice: false,
         desc: '적당한 비 뒤에 아름다운 무지개가 떴습니다!\n전체 수분이 살짝 보충됩니다.',
         choices: [{
@@ -268,7 +277,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'yellow_dust', emoji: '🌫️', title: '황사',
+        id: 'yellow_dust', weight: 10, once: false, emoji: '🌫️', title: '황사',
         type: 'negative', hasDice: false,
         condition: () => currentSeason === '봄',
         desc: '황사가 밀려옵니다!\n이번 틱 성장이 없고 잡초가 빠르게 번집니다. (5일)',
@@ -283,7 +292,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'spring_rain', emoji: '🌦️', title: '봄비',
+        id: 'spring_rain', weight: 18, once: false, emoji: '🌦️', title: '봄비',
         type: 'positive', hasDice: false,
         condition: () => currentSeason === '봄',
         desc: '촉촉한 봄비가 내립니다.\n농장 전체가 적당히 촉촉해졌습니다.',
@@ -296,7 +305,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'typhoon', emoji: '🌀', title: '태풍 예보',
+        id: 'typhoon', weight: 4, once: true, emoji: '🌀', title: '태풍 예보',
         type: 'negative', hasDice: true,
         desc: '강력한 태풍이 접근 중입니다!\n미리 대비하시겠습니까?\n\n[대비 $200] 선택 후 주사위를 굴립니다.\n높을수록 피해를 완벽히 막습니다.',
         choices: [
@@ -320,7 +329,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'blizzard', emoji: '❄️', title: '폭설',
+        id: 'blizzard', weight: 10, once: false, emoji: '❄️', title: '폭설',
         type: 'negative', hasDice: false,
         condition: () => currentSeason === '겨울',
         desc: '폭설이 쏟아집니다!\n수분 게이지가 3틱 동안 동결됩니다.',
@@ -330,7 +339,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'lightning', emoji: '⚡', title: '천둥번개',
+        id: 'lightning', weight: 8, once: false, emoji: '⚡', title: '천둥번개',
         type: 'negative', hasDice: false,
         desc: '번개가 농장 근처에 떨어졌습니다!\n작물 1칸이 즉시 부패했습니다.',
         choices: [{
@@ -345,7 +354,7 @@ const ENCOUNTERS = [
 
     // ── 병해충/동물 ───────────────────────────────────
     {
-        id: 'locust', emoji: '🦗', title: '메뚜기 떼',
+        id: 'locust', weight: 20, once: false, emoji: '🦗', title: '메뚜기 떼',
         type: 'negative', hasDice: false,
         desc: '메뚜기 떼가 출몰했습니다!\n밭에 잡초가 급격히 번집니다.',
         choices: [{
@@ -358,7 +367,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'mole', emoji: '🐾', title: '두더지',
+        id: 'mole', weight: 18, once: false, emoji: '🐾', title: '두더지',
         type: 'negative', hasDice: false,
         desc: '두더지가 밭을 헤집었습니다!\n2칸의 수분이 사라졌습니다.',
         choices: [{
@@ -370,7 +379,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'birds', emoji: '🐦', title: '철새 떼',
+        id: 'birds', weight: 15, once: false, emoji: '🐦', title: '철새 떼',
         type: 'negative', hasDice: false,
         condition: () => currentSeason === '봄' || currentSeason === '가을',
         desc: '철새 떼가 씨앗을 쪼아먹었습니다!\n씨앗 단계 작물이 소실됐습니다.',
@@ -384,7 +393,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'deer', emoji: '🦌', title: '고라니 출몰',
+        id: 'deer', weight: 12, once: false, emoji: '🦌', title: '고라니 출몰',
         type: 'negative', hasDice: false,
         desc: '고라니가 밭을 습격했습니다!\n작물 3칸이 피해를 입었습니다.',
         choices: [{
@@ -397,7 +406,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'ladybug', emoji: '🐞', title: '무당벌레',
+        id: 'ladybug', weight: 8, once: false, emoji: '🐞', title: '무당벌레',
         type: 'positive', hasDice: false,
         desc: '천적 무당벌레가 나타났습니다!\n병충해가 자동으로 제거됩니다.',
         choices: [{
@@ -410,7 +419,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'earthworm', emoji: '🪱', title: '지렁이 대발생',
+        id: 'earthworm', weight: 6, once: false, emoji: '🪱', title: '지렁이 대발생',
         type: 'positive', hasDice: false,
         desc: '지렁이가 땅을 비옥하게 합니다!\n당분간 작물 성장이 빨라집니다. (15일)',
         choices: [{
@@ -419,7 +428,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'crow', emoji: '🐦‍⬛', title: '까마귀 떼',
+        id: 'crow', weight: 15, once: false, emoji: '🐦‍⬛', title: '까마귀 떼',
         type: 'negative', hasDice: true,
         desc: '까마귀 떼가 밭을 노립니다!\n허수아비를 설치하시겠습니까?\n\n[설치 $50] 선택 후 주사위 — 높을수록 효과 좋음.',
         choices: [
@@ -444,7 +453,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'snail', emoji: '🐌', title: '달팽이',
+        id: 'snail', weight: 18, once: false, emoji: '🐌', title: '달팽이',
         type: 'negative', hasDice: false,
         desc: '달팽이가 잎을 갉아먹습니다!\n작물 2칸에 병충해가 발생했습니다.',
         choices: [{
@@ -457,7 +466,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'bee', emoji: '🐝', title: '꿀벌',
+        id: 'bee', weight: 6, once: false, emoji: '🐝', title: '꿀벌',
         type: 'positive', hasDice: false,
         desc: '꿀벌이 날아왔습니다!\n이번 수확의 판매가가 10% 올랐습니다.',
         choices: [{
@@ -466,7 +475,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'boar', emoji: '🐗', title: '멧돼지',
+        id: 'boar', weight: 3, once: false, emoji: '🐗', title: '멧돼지',
         type: 'negative', hasDice: false,
         desc: '멧돼지가 밭을 뒤집었습니다!\n개간된 4칸이 다시 잠겼습니다.',
         condition: () => {
@@ -496,7 +505,7 @@ const ENCOUNTERS = [
 
     // ── NPC/사건 ──────────────────────────────────────
     {
-        id: 'wanderer', emoji: '🧑‍🌾', title: '떠돌이 농부',
+        id: 'wanderer', weight: 8, once: true, emoji: '🧑‍🌾', title: '떠돌이 농부',
         type: 'mixed', hasDice: true,
         desc: '도움을 요청하는 떠돌이 농부가 왔습니다.\n도와주시겠습니까?\n\n[도움 $100] 선택 후 주사위 — 보상이 달라집니다.',
         choices: [
@@ -516,7 +525,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'advisor', emoji: '👨‍💼', title: '농업 지도사 방문',
+        id: 'advisor', weight: 6, once: false, emoji: '👨‍💼', title: '농업 지도사 방문',
         type: 'positive', hasDice: false,
         desc: '농업 지도사가 농장을 점검합니다.\n특정 작물의 성장이 빨라집니다!',
         choices: [{
@@ -542,7 +551,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'thief', emoji: '🦹', title: '도둑',
+        id: 'thief', weight: 10, once: false, emoji: '🦹', title: '도둑',
         type: 'negative', hasDice: false,
         desc: '밤 사이 도둑이 들었습니다!\n수확 가능한 작물이 도난당했습니다.',
         choices: [{
@@ -555,7 +564,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'neighbor_gift', emoji: '🎁', title: '이웃 농부 선물',
+        id: 'neighbor_gift', weight: 8, once: false, emoji: '🎁', title: '이웃 농부 선물',
         type: 'positive', hasDice: false,
         desc: '이웃 농부가 씨앗을 나눠줬습니다!\n현재 계절에 맞는 씨앗을 무료로 받았습니다.',
         choices: [{
@@ -568,7 +577,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'merchant', emoji: '🛒', title: '행상인',
+        id: 'merchant', weight: 7, once: true, emoji: '🛒', title: '행상인',
         type: 'mixed', hasDice: true,
         desc: '희귀 씨앗을 파는 행상인이 왔습니다.\n구매하시겠습니까?\n\n[구매 $150] 선택 후 주사위 — 품질이 달라집니다.',
         choices: [
@@ -585,7 +594,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'market_glut', emoji: '📉', title: '시장 풍년',
+        id: 'market_glut', weight: 12, once: false, emoji: '📉', title: '시장 풍년',
         type: 'negative', hasDice: false,
         desc: '이번 주 시장에 작물이 넘칩니다.\n판매가가 한동안 낮아집니다.',
         choices: [{
@@ -594,7 +603,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'market_shortage', emoji: '📈', title: '시장 흉년',
+        id: 'market_shortage', weight: 8, once: false, emoji: '📈', title: '시장 흉년',
         type: 'positive', hasDice: false,
         desc: '작물 공급이 부족합니다!\n판매가가 크게 올랐습니다.',
         choices: [{
@@ -603,7 +612,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'tax', emoji: '🏛️', title: '세금 징수원',
+        id: 'tax', weight: 10, once: false, emoji: '🏛️', title: '세금 징수원',
         type: 'negative', hasDice: false,
         desc: '관청에서 세금을 걷으러 왔습니다.\n현재 잔고의 5%를 납부해야 합니다.',
         choices: [{
@@ -616,7 +625,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'festival', emoji: '🎪', title: '마을 축제',
+        id: 'festival', weight: 12, once: false, emoji: '🎪', title: '마을 축제',
         type: 'positive', hasDice: true,
         desc: '마을 축제에 초대받았습니다!\n참가하시겠습니까?\n\n[참가 $50] 선택 후 주사위 — 높을수록 더 좋은 인연.',
         choices: [
@@ -633,7 +642,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'junk_dealer', emoji: '🗑️', title: '고물상',
+        id: 'junk_dealer', weight: 10, once: false, emoji: '🗑️', title: '고물상',
         type: 'positive', hasDice: false,
         desc: '고물상이 농장 폐자재를 사겠다고 합니다.\n$80을 받으시겠습니까?',
         choices: [{
@@ -644,7 +653,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'scammer', emoji: '🎰', title: '사기꾼',
+        id: 'scammer', weight: 5, once: true, emoji: '🎰', title: '사기꾼',
         type: 'mixed', hasDice: true,
         desc: '수상한 거래를 제안하는 사람이 나타났습니다.\n[수락] 선택 후 주사위 — 반반의 확률입니다.',
         choices: [
@@ -660,7 +669,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'subsidy', emoji: '🏦', title: '농협 보조금',
+        id: 'subsidy', weight: 4, once: false, emoji: '🏦', title: '농협 보조금',
         type: 'positive', hasDice: false,
         desc: '농협에서 보조금이 지급됐습니다!',
         choices: [{
@@ -669,7 +678,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'field_trip', emoji: '🧒', title: '어린이 견학',
+        id: 'field_trip', weight: 6, once: true, emoji: '🧒', title: '어린이 견학',
         type: 'positive', hasDice: false,
         desc: '학생들이 농장을 견학하러 왔습니다.\n아이들이 신기한 눈으로 농장을 구경했습니다.',
         choices: [{
@@ -678,7 +687,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'reporter', emoji: '📰', title: '기자 방문',
+        id: 'reporter', weight: 6, once: true, emoji: '📰', title: '기자 방문',
         type: 'mixed', hasDice: true,
         desc: '기자가 농장 취재를 원합니다.\n허락하시겠습니까?\n\n[허락] 선택 후 주사위 — 기사 퀄리티에 따라 효과가 다릅니다.',
         choices: [
@@ -694,7 +703,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'temp_worker', emoji: '👷', title: '임시 노동자',
+        id: 'temp_worker', weight: 10, once: false, emoji: '👷', title: '임시 노동자',
         type: 'mixed', hasDice: false,
         desc: '일당 노동자를 고용할 수 있습니다.\n$80에 3틱 동안 잡초 제거와 급수를 도와줍니다.',
         choices: [
@@ -712,7 +721,7 @@ const ENCOUNTERS = [
 
     // ── 경제/금융 ─────────────────────────────────────
     {
-        id: 'rate_hike', emoji: '📊', title: '금리 인상',
+        id: 'rate_hike', weight: 8, once: false, emoji: '📊', title: '금리 인상',
         type: 'negative', hasDice: false,
         condition: () => fixedLoanAmount > 0,
         desc: '은행이 금리를 올렸습니다.\n이번 달 대출 이자가 추가됩니다.',
@@ -722,7 +731,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'rate_cut', emoji: '📉', title: '금리 인하',
+        id: 'rate_cut', weight: 6, once: false, emoji: '📉', title: '금리 인하',
         type: 'positive', hasDice: false,
         condition: () => fixedLoanAmount > 0,
         desc: '은행이 금리를 내렸습니다!\n이번 달 대출 이자가 감면됩니다.',
@@ -732,7 +741,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'futures', emoji: '🤝', title: '작물 선물거래',
+        id: 'futures', weight: 5, once: true, emoji: '🤝', title: '작물 선물거래',
         type: 'mixed', hasDice: true,
         desc: '상인이 미래 수확물을 선매입하겠다고 합니다.\n[수락] 선택 후 주사위 — 선금이 달라집니다. 단, 다음 수확 판매 불가.',
         choices: [
@@ -749,7 +758,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'machine_broken', emoji: '🔧', title: '농기계 고장',
+        id: 'machine_broken', weight: 8, once: false, emoji: '🔧', title: '농기계 고장',
         type: 'negative', hasDice: false,
         condition: () => Object.values(toolDurability).some(d => d > 0),
         desc: '농기계가 고장났습니다!\n[수리 $100] 하지 않으면 범위 도구 내구도가 감소합니다.',
@@ -773,7 +782,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'lottery', emoji: '🎰', title: '복권 당첨',
+        id: 'lottery', weight: 3, once: true, emoji: '🎰', title: '복권 당첨',
         type: 'positive', hasDice: true,
         condition: () => Math.random() < 0.3, // 추가 발생 필터
         desc: '복권에 당첨됐습니다!\n주사위를 굴려 당첨금을 확인하세요!',
@@ -787,7 +796,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'lost_wallet', emoji: '👛', title: '지갑 분실',
+        id: 'lost_wallet', weight: 12, once: false, emoji: '👛', title: '지갑 분실',
         type: 'negative', hasDice: false,
         desc: '지갑을 잃어버렸습니다!\n$50이 사라졌습니다.',
         choices: [{
@@ -796,7 +805,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'insurance', emoji: '📋', title: '풍년 보험금',
+        id: 'insurance', weight: 5, once: false, emoji: '📋', title: '풍년 보험금',
         type: 'positive', hasDice: false,
         condition: () => fixedLoanAmount > 0,
         desc: '가입했던 농업 보험금이 지급됐습니다!',
@@ -808,7 +817,7 @@ const ENCOUNTERS = [
 
     // ── 가족/개인 ─────────────────────────────────────
     {
-        id: 'spouse_birthday', emoji: '🎂', title: '배우자 생일',
+        id: 'spouse_birthday', weight: 8, once: false, emoji: '🎂', title: '배우자 생일',
         type: 'mixed', hasDice: true,
         condition: () => hasSpouse,
         desc: `배우자 생일을 잊을 뻔했습니다!\n[선물 $50] 선택 후 주사위 — 반응이 달라집니다.`,
@@ -829,7 +838,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'sick_child', emoji: '🤒', title: '자녀 아픔',
+        id: 'sick_child', weight: 10, once: false, emoji: '🤒', title: '자녀 아픔',
         type: 'negative', hasDice: false,
         condition: () => children.length > 0,
         desc: '자녀가 아파서 병원에 다녀왔습니다.\n치료비 $80이 지출됩니다.',
@@ -839,7 +848,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'injury', emoji: '🤕', title: '가장 부상',
+        id: 'injury', weight: 6, once: false, emoji: '🤕', title: '가장 부상',
         type: 'negative', hasDice: false,
         desc: '무리하다 부상을 입었습니다!\n잠시 동안 영토 확장과 농약 살포가 제한됩니다.',
         choices: [{
@@ -848,7 +857,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'family_trip', emoji: '🚗', title: '가족 여행',
+        id: 'family_trip', weight: 7, once: true, emoji: '🚗', title: '가족 여행',
         type: 'positive', hasDice: true,
         condition: () => children.length > 0,
         desc: '가족 여행을 다녀왔습니다!\n[참가 $120] 선택 후 주사위 — 자녀 성장 보너스가 달라집니다.',
@@ -866,7 +875,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'ancestor_grave', emoji: '⛩️', title: '조상 묘소',
+        id: 'ancestor_grave', weight: 6, once: false, emoji: '⛩️', title: '조상 묘소',
         type: 'mixed', hasDice: true,
         desc: '조상 묘소를 정비할 때가 됐습니다.\n[정비 $60] 선택 후 주사위 — 높을수록 더 큰 가호.',
         choices: [
@@ -883,7 +892,7 @@ const ENCOUNTERS = [
         ]
     },
     {
-        id: 'retired_advice', emoji: '👴', title: '은퇴 가족 조언',
+        id: 'retired_advice', weight: 8, once: true, emoji: '👴', title: '은퇴 가족 조언',
         type: 'positive', hasDice: false,
         condition: () => retiredFamily.length > 0,
         desc: '은퇴한 가족이 귀중한 조언을 남겼습니다!\n현재 계절 작물이 성장합니다.',
@@ -904,7 +913,7 @@ const ENCOUNTERS = [
         }]
     },
     {
-        id: 'family_record', emoji: '📜', title: '가문 기록 발견',
+        id: 'family_record', weight: 4, once: true, emoji: '📜', title: '가문 기록 발견',
         type: 'positive', hasDice: false,
         condition: () => dynastyStartDay !== -1,
         desc: '오래된 가문 기록을 발견했습니다!\n선조의 지혜로 +$100을 얻었습니다.',

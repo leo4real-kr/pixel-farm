@@ -19,6 +19,7 @@ function buildSaveData() {
         wormBonus, wormBonusDays, frozenWaterDays, droughtDouble, droughtDays,
         dustDays, hiredWorker, hiredWorkerDays, presaleActive,
         injuredDays, interestModifier, interestModDays, diceBonus,
+        firedOnce: [...firedOnce],
         currentSeason, currentWeather,
         totalRevenue, totalExpense, fixedLoanAmount,
         endingFired,
@@ -89,6 +90,8 @@ function applySaveData(d) {
     interestModifier   = d.interestModifier   ?? 0;
     interestModDays    = d.interestModDays    ?? 0;
     diceBonus          = d.diceBonus          ?? 0;
+    firedOnce.clear();
+    (d.firedOnce ?? []).forEach(id => firedOnce.add(id));
     currentSeason  = d.currentSeason;
     currentWeather = d.currentWeather;
     totalRevenue   = d.totalRevenue;

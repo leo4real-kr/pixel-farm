@@ -269,6 +269,7 @@ function resetGame(forceReset = false) {
     frozenWaterDays = 0; droughtDouble = false; droughtDays = 0; dustDays = 0;
     hiredWorker = false; hiredWorkerDays = 0; presaleActive = false;
     injuredDays = 0; interestModifier = 0; interestModDays = 0; diceBonus = 0;
+    firedOnce.clear();
     generation = 1; endingFired = false;
     currentSeason = '봄'; currentWeather = '맑음'; currentTool = 'select';
     hasSpouse = false; spouseName = ''; spouseGrade = 'C';
