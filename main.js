@@ -299,7 +299,10 @@ function resetGame(forceReset = false) {
             document.getElementById('title-step-1').style.display = 'block';
             document.getElementById('title-step-2').style.display = 'none';
             document.getElementById('title-step-3').style.display = 'none';
+            document.getElementById('title-step-4').style.display = 'none';
             document.getElementById('title-name-input').value = '';
+            document.getElementById('opening-text').innerHTML = '';
+            document.getElementById('opening-next-btn').style.display = 'none';
         }
     } else {
         updateFinancials('수입', 0, '회계 장부 개설');
@@ -315,24 +318,102 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
+// ── 오프닝 스토리 텍스트 ────────────────────────────
+const OPENING_STORY = `<span style="color:#aaa;font-style:italic;">"전 아버지처럼 살지 않을 거에요."</span>
+
+호기롭게 뛰쳐나갔던 고향.
+도시의 삶은 생각과 너무 달랐다.
+
+처음엔 모든 사업이 잘 될 거라 믿었다.
+그야말로 잘 나가는 사장님이었으니까.
+
+하지만 사람 좋은 동네에서 의심 없이 살았던 게 문제였을까.
+정신을 차려보니 몸뚱이 하나 겨우 건질 수 있었다.
+
+그때 더 큰 좌절이 찾아왔다.
+
+<b style="color:#e57373;">부모님의 사망.</b>
+
+정신없이 장례를 치르고, 돌아갈 곳을 생각해보니
+낡은 고향집과 황무지 같은 밭뙈기뿐이었다.
+
+수중에 남은 것은 <b style="color:#ffb74d;">$1,000</b>.
+그리고 흙냄새 나는 이 땅.
+
+<span style="color:#a5d66a;">그래. 다시 시작해보자.</span>
+
+&nbsp;
+
+<span style="color:#666; font-size:11px;">— 화면을 클릭하면 넘어갑니다 —</span>`;
+
+// ── 타이핑 효과 ──────────────────────────────────────
+function typeOpening() {
+    const el = document.getElementById('opening-text');
+    const btn = document.getElementById('opening-next-btn');
+    if (!el || !btn) return;
+
+    el.innerHTML = '';
+    btn.style.display = 'none';
+
+    // HTML 태그 포함 타이핑
+    let i = 0;
+    const chars = OPENING_STORY;
+    let displayed = '';
+    let inTag = false;
+
+    const timer = setInterval(() => {
+        if (i >= chars.length) {
+            clearInterval(timer);
+            btn.style.display = 'inline-block';
+            return;
+        }
+        const ch = chars[i];
+        if (ch === '<') inTag = true;
+        if (!inTag) {
+            displayed += ch;
+            el.innerHTML = displayed;
+        } else {
+            displayed += ch;
+            el.innerHTML = displayed;
+        }
+        if (ch === '>') inTag = false;
+        i++;
+        if (!inTag) i; // 태그 안은 빠르게
+    }, inTag ? 0 : 30);
+
+    // 클릭으로 스킵
+    el.addEventListener('click', () => {
+        clearInterval(timer);
+        el.innerHTML = OPENING_STORY;
+        btn.style.display = 'inline-block';
+    }, { once: true });
+}
+
 // ── 타이틀 화면 제어 ────────────────────────────────
 function titleNext(step) {
     if (step === 1) {
+        // 시작 버튼 → 오프닝 스토리
         document.getElementById('title-step-1').style.display = 'none';
         document.getElementById('title-step-2').style.display = 'block';
-        setTimeout(() => document.getElementById('title-name-input').focus(), 100);
+        typeOpening();
     } else if (step === 2) {
-        const nameInput = document.getElementById('title-name-input').value.trim();
-        playerName = nameInput || '플레이어';
+        // 오프닝 → 이름 입력
         document.getElementById('title-step-2').style.display = 'none';
         document.getElementById('title-step-3').style.display = 'block';
+        setTimeout(() => document.getElementById('title-name-input').focus(), 100);
+    } else if (step === 3) {
+        // 이름 입력 → 조작법
+        const nameInput = document.getElementById('title-name-input').value.trim();
+        playerName = nameInput || '플레이어';
+        document.getElementById('title-step-3').style.display = 'none';
+        document.getElementById('title-step-4').style.display = 'block';
     }
 }
 
 // 이름 입력창에서 Enter 키
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('title-name-input').addEventListener('keydown', e => {
-        if (e.key === 'Enter') titleNext(2);
+        if (e.key === 'Enter') titleNext(3);
     });
 });
 
