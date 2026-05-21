@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Farm v0.3.0</title>
+    <title>Pixel Farm v0.4.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,15 +14,37 @@
         <img id="title-image" src="images/title.png" alt="Pixel Farm"
              onerror="this.style.display='none'">
         <h1 id="title-logo">🌾 Pixel Farm</h1>
-        <p id="title-version">v0.3.0</p>
+        <p id="title-version">v0.4.0</p>
 
         <!-- 단계 1: 시작 버튼 -->
         <div id="title-step-1">
             <button class="title-btn" onclick="titleNext(1)">▶ 게임 시작</button>
         </div>
 
-        <!-- 단계 2: 이름 입력 -->
-        <div id="title-step-2" style="display:none;">
+        <!-- 단계 2: 오프닝 스토리 (4컷 슬라이드) -->
+        <div id="title-step-2" style="display:none; width:100%;">
+            <div id="opening-cut-container" style="
+                transition: opacity 0.3s ease;
+                opacity: 1;
+            ">
+                <img id="opening-cut-img" src="" alt=""
+                    style="width:100%; border-radius:8px; margin-bottom:12px;
+                           border:1px solid #3a4a2a; max-height:220px; object-fit:cover;">
+                <div id="opening-cut-text"
+                    style="font-size:13px; color:#ccc; line-height:1.8;
+                           min-height:70px; text-align:left; padding:0 4px;
+                           margin-bottom:12px;">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="opening-progress" style="color:#555; font-size:11px;">1 / 4</span>
+                    <button id="opening-next-btn" class="title-btn"
+                        style="padding:8px 24px; font-size:13px;">다음 →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 단계 3: 이름 입력 -->
+        <div id="title-step-3" style="display:none;">
             <p style="color:#ccc; margin-bottom:10px;">1대 가장의 이름을 입력하세요</p>
             <input id="title-name-input" type="text" placeholder="플레이어"
                 maxlength="10"
@@ -30,11 +52,11 @@
                        padding:8px 14px; font-size:15px; border-radius:6px;
                        text-align:center; width:180px; margin-bottom:12px;">
             <br>
-            <button class="title-btn" onclick="titleNext(2)">→ 다음</button>
+            <button class="title-btn" onclick="titleNext(3)">→ 다음</button>
         </div>
 
-        <!-- 단계 3: 조작법 안내 -->
-        <div id="title-step-3" style="display:none;">
+        <!-- 단계 4: 조작법 안내 -->
+        <div id="title-step-4" style="display:none;">
             <div id="title-guide">
                 <p>🖱️ <b>클릭</b> — 타일 조작 (심기 / 수확 / 물주기 등)</p>
                 <p>📦 <b>영토 확장</b> — 잠긴 타일 클릭으로 개간 ($100)</p>
@@ -64,7 +86,7 @@
     </div>
 
     <div id="left-panel">
-        <h1>Pixel Farm v0.3.0</h1>
+        <h1>Pixel Farm v0.4.0</h1>
         
         <div id="top-hud">
             <div class="hud-item" id="calendar-hud" style="cursor:default; user-select:none;">🗓️ <span id="seasonDisplay" class="value">봄</span> <span id="dayDisplay">1</span>일차</div>

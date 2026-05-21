@@ -301,8 +301,7 @@ function resetGame(forceReset = false) {
             document.getElementById('title-step-3').style.display = 'none';
             document.getElementById('title-step-4').style.display = 'none';
             document.getElementById('title-name-input').value = '';
-            document.getElementById('opening-text').innerHTML = '';
-            document.getElementById('opening-next-btn').style.display = 'none';
+            openingCutIndex = 0;
         }
     } else {
         updateFinancials('수입', 0, '회계 장부 개설');
@@ -318,91 +317,80 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// ── 오프닝 스토리 텍스트 ────────────────────────────
-const OPENING_STORY = `<span style="color:#aaa;font-style:italic;">"전 아버지처럼 살지 않을 거에요."</span>
+// ── 오프닝 스토리 컷 정의 ───────────────────────────
+const OPENING_CUTS = [
+    {
+        img: 'images/opening1.jpg',
+        text: `그야말로 잘 나가는 사장님이었다.<br><br>
+               <span style="color:#aaa;">도시의 불빛만큼이나 미래가 밝아 보였던 그 시절.</span>`
+    },
+    {
+        img: 'images/opening2.jpg',
+        text: `하지만 사람 좋은 동네에서 의심 없이 살았던 게 문제였을까.<br><br>
+               <span style="color:#e57373;">정신을 차려보니 몸뚱이 하나도 겨우 건질 수 있었다.</span>`
+    },
+    {
+        img: 'images/opening3.jpg',
+        text: `그때 더 큰 좌절이 찾아왔다.<br><br>
+               <b style="color:#ccc;">부모님의 사망.</b><br><br>
+               <span style="color:#aaa;">정신없이 장례를 치르고, 돌아갈 곳을 생각해보니<br>
+               낡은 고향집과 황무지 같은 밭뙈기뿐이었다.</span>`
+    },
+    {
+        img: 'images/opening4.jpg',
+        text: `수중에 남은 것은 <b style="color:#ffb74d;">$1,000</b>.<br>
+               그리고 흙냄새 나는 이 땅.<br><br>
+               <span style="color:#a5d66a; font-size:15px;"><b>그래. 다시 시작해보자.</b></span>`
+    },
+];
 
-호기롭게 뛰쳐나갔던 고향.
-도시의 삶은 생각과 너무 달랐다.
+let openingCutIndex = 0;
 
-처음엔 모든 사업이 잘 될 거라 믿었다.
-그야말로 잘 나가는 사장님이었으니까.
+function showOpeningCut(index) {
+    const cut = OPENING_CUTS[index];
+    const container = document.getElementById('opening-cut-container');
+    const img       = document.getElementById('opening-cut-img');
+    const text      = document.getElementById('opening-cut-text');
+    const btn       = document.getElementById('opening-next-btn');
+    const progress  = document.getElementById('opening-progress');
 
-하지만 사람 좋은 동네에서 의심 없이 살았던 게 문제였을까.
-정신을 차려보니 몸뚱이 하나 겨우 건질 수 있었다.
+    // 이미지 페이드
+    container.style.opacity = '0';
+    setTimeout(() => {
+        img.src = cut.img;
+        text.innerHTML = cut.text;
+        progress.innerText = `${index + 1} / ${OPENING_CUTS.length}`;
+        container.style.opacity = '1';
+    }, 300);
 
-그때 더 큰 좌절이 찾아왔다.
-
-<b style="color:#e57373;">부모님의 사망.</b>
-
-정신없이 장례를 치르고, 돌아갈 곳을 생각해보니
-낡은 고향집과 황무지 같은 밭뙈기뿐이었다.
-
-수중에 남은 것은 <b style="color:#ffb74d;">$1,000</b>.
-그리고 흙냄새 나는 이 땅.
-
-<span style="color:#a5d66a;">그래. 다시 시작해보자.</span>
-
-&nbsp;
-
-<span style="color:#666; font-size:11px;">— 화면을 클릭하면 넘어갑니다 —</span>`;
-
-// ── 타이핑 효과 ──────────────────────────────────────
-function typeOpening() {
-    const el = document.getElementById('opening-text');
-    const btn = document.getElementById('opening-next-btn');
-    if (!el || !btn) return;
-
-    el.innerHTML = '';
-    btn.style.display = 'none';
-
-    // HTML 태그 포함 타이핑
-    let i = 0;
-    const chars = OPENING_STORY;
-    let displayed = '';
-    let inTag = false;
-
-    const timer = setInterval(() => {
-        if (i >= chars.length) {
-            clearInterval(timer);
-            btn.style.display = 'inline-block';
-            return;
-        }
-        const ch = chars[i];
-        if (ch === '<') inTag = true;
-        if (!inTag) {
-            displayed += ch;
-            el.innerHTML = displayed;
+    // 마지막 컷이면 버튼 텍스트 변경
+    btn.innerText = index < OPENING_CUTS.length - 1 ? '다음 →' : '농장으로 →';
+    btn.onclick = () => {
+        if (openingCutIndex < OPENING_CUTS.length - 1) {
+            openingCutIndex++;
+            showOpeningCut(openingCutIndex);
         } else {
-            displayed += ch;
-            el.innerHTML = displayed;
+            titleNext(2);
         }
-        if (ch === '>') inTag = false;
-        i++;
-        if (!inTag) i; // 태그 안은 빠르게
-    }, inTag ? 0 : 30);
+    };
+}
 
-    // 클릭으로 스킵
-    el.addEventListener('click', () => {
-        clearInterval(timer);
-        el.innerHTML = OPENING_STORY;
-        btn.style.display = 'inline-block';
-    }, { once: true });
+function startOpening() {
+    openingCutIndex = 0;
+    showOpeningCut(0);
 }
 
 // ── 타이틀 화면 제어 ────────────────────────────────
 function titleNext(step) {
     if (step === 1) {
-        // 시작 버튼 → 오프닝 스토리
         document.getElementById('title-step-1').style.display = 'none';
         document.getElementById('title-step-2').style.display = 'block';
-        typeOpening();
+        startOpening();
     } else if (step === 2) {
-        // 오프닝 → 이름 입력
         document.getElementById('title-step-2').style.display = 'none';
         document.getElementById('title-step-3').style.display = 'block';
         setTimeout(() => document.getElementById('title-name-input').focus(), 100);
     } else if (step === 3) {
-        // 이름 입력 → 조작법
         const nameInput = document.getElementById('title-name-input').value.trim();
         playerName = nameInput || '플레이어';
         document.getElementById('title-step-3').style.display = 'none';
