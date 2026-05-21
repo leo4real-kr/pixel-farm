@@ -380,7 +380,62 @@ function startOpening() {
     showOpeningCut(0);
 }
 
-// ── 타이틀 화면 제어 ────────────────────────────────
+function skipOpening() {
+    document.getElementById('title-step-2').style.display = 'none';
+    document.getElementById('title-step-3').style.display = 'block';
+    setTimeout(() => document.getElementById('title-name-input').focus(), 100);
+}
+
+// ── 타이틀 세이브 슬롯 렌더링 ───────────────────────
+function renderTitleSaveSlots() {
+    const container = document.getElementById('title-save-slots');
+    if (!container) return;
+
+    const allSlots = [
+        { key: SAVE_AUTO,     label: '🔄 자동 저장' },
+        { key: SAVE_SLOTS[0], label: '💾 슬롯 1' },
+        { key: SAVE_SLOTS[1], label: '💾 슬롯 2' },
+        { key: SAVE_SLOTS[2], label: '💾 슬롯 3' },
+    ];
+
+    const found = allSlots.filter(s => localStorage.getItem(s.key));
+    if (found.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="color:#666; font-size:11px; margin-bottom:6px;">— 저장 파일 불러오기 —</div>
+        ${found.map(s => {
+            const d = JSON.parse(localStorage.getItem(s.key));
+            const info = d ? `${d.playerName || '?'} | ${d.generation || 1}대 | ${d.gameDays || 1}일차 | $${d.money || 0}` : '';
+            return `<button onclick="titleLoadSlot('${s.key}')"
+                style="display:block; width:100%; background:#1e2e1e;
+                       border:1px solid #3a5a2a; color:#a5d66a;
+                       padding:7px 12px; margin-bottom:5px; border-radius:6px;
+                       font-size:11px; cursor:pointer; text-align:left;">
+                <b>${s.label}</b>
+                <span style="color:#888; margin-left:8px;">${info}</span>
+            </button>`;
+        }).join('')}
+    `;
+}
+
+function titleLoadSlot(key) {
+    const raw = localStorage.getItem(key);
+    if (!raw) { alert('저장 파일을 찾을 수 없습니다.'); return; }
+    try {
+        const d = JSON.parse(raw);
+        if (!applySaveData(d)) return;
+        document.getElementById('title-screen').style.display = 'none';
+        refreshAllUI();
+        if (!gameInterval) animate();
+        setGameSpeed(1);
+        addSysLog(`📂 ${key === SAVE_AUTO ? '자동 저장' : '슬롯'} 파일을 불러왔습니다.`);
+    } catch (e) {
+        alert('저장 파일을 읽을 수 없습니다.');
+    }
+}
 function titleNext(step) {
     if (step === 1) {
         document.getElementById('title-step-1').style.display = 'none';
@@ -420,6 +475,7 @@ function startGame() {
     preloadImages(() => {
         resizeCanvas();
         centerViewOn(Math.floor(GRID_SIZE / 2), Math.floor(GRID_SIZE / 2));
+        renderTitleSaveSlots();
         // 타이틀 화면이 먼저 표시되고 startGame()에서 게임 시작
     });
 })();

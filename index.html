@@ -18,7 +18,9 @@
 
         <!-- 단계 1: 시작 버튼 -->
         <div id="title-step-1">
-            <button class="title-btn" onclick="titleNext(1)">▶ 게임 시작</button>
+            <button class="title-btn" onclick="titleNext(1)" style="margin-bottom:10px;">▶ 게임 시작</button>
+            <br>
+            <div id="title-save-slots" style="margin-top:8px;"></div>
         </div>
 
         <!-- 단계 2: 오프닝 스토리 (4컷 슬라이드) -->
@@ -36,6 +38,11 @@
                            margin-bottom:12px;">
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button onclick="skipOpening()"
+                        style="background:none; border:none; color:#555;
+                               font-size:11px; cursor:pointer; padding:4px 8px;">
+                        건너뛰기 ▶▶
+                    </button>
                     <span id="opening-progress" style="color:#555; font-size:11px;">1 / 4</span>
                     <button id="opening-next-btn" class="title-btn"
                         style="padding:8px 24px; font-size:13px;">다음 →</button>
