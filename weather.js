@@ -33,6 +33,9 @@ function tickWeather() {
 
 // ── 타일 수분 처리 ───────────────────────────────────
 function applyWaterDrain(tile, nearTree) {
+    // 폭설 동결 중 — 수분 변화 없음
+    if (frozenWaterDays > 0) return;
+
     if (currentWeather === '비') {
         tile.water += 15;
     } else {
@@ -40,6 +43,8 @@ function applyWaterDrain(tile, nearTree) {
                   : currentWeather === '폭염' ? 20
                   : 5;
         if (nearTree) drain = Math.floor(drain * 0.5);
+        // 가뭄 인카운터 2배 효과
+        if (droughtDouble) drain = drain * 2;
         tile.water -= drain;
     }
     if (tile.hasWeed) tile.water -= 8;
@@ -155,6 +160,8 @@ function applyGrowth(tile) {
         } else {
             growth = [0, 25, 20, 12, currentWeather === '폭염' ? 7 : 15, 5][tile.type] || 0;
         }
+        // 지렁이 대발생 보너스
+        if (wormBonus) growth = Math.floor(growth * 1.2);
         tile.progress = Math.min(100, tile.progress + growth);
     } else if (tile.type !== 5) {
         tile.overRipeDays++;

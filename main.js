@@ -166,9 +166,15 @@ function tick() {
             applyOverwater(tile);
             applyPest(tile, x, y, weedCount);
             applyWeedSpawn(tile, nearCorn);
-            applyGrowth(tile);
+            if (!dustDays) applyGrowth(tile); // 황사 중 성장 정지
         }
     }
+
+    // 인카운터 효과 틱 처리
+    processEncounterEffects();
+
+    // 랜덤 인카운터 체크 (매 5일)
+    if (absoluteDays % 5 === 0 && !encounterActive) checkEncounter();
 
     // 병충해 신규 발생 알림 (이번 틱에 새로 감염된 타일이 있을 때만)
     let pestCountAfter = 0;
@@ -258,6 +264,11 @@ function resetGame(forceReset = false) {
     ssSpouse = ''; loanLimitBonus = 0; sellBonusPct = 0; nobleEnding = false;
     festivalCount = 0; totalHarvestCount = 0; harvestTypeSet = new Set();
     ssMarriageEventFired = { beatrice: false, joan: false, scarlet: false };
+    encounterActive = false; encounterCooldown = 0; ancestorBlessing = false;
+    marketBonus = 0; marketBonusDays = 0; wormBonus = false; wormBonusDays = 0;
+    frozenWaterDays = 0; droughtDouble = false; droughtDays = 0; dustDays = 0;
+    hiredWorker = false; hiredWorkerDays = 0; presaleActive = false;
+    injuredDays = 0; interestModifier = 0; interestModDays = 0; diceBonus = 0;
     generation = 1; endingFired = false;
     currentSeason = '봄'; currentWeather = '맑음'; currentTool = 'select';
     hasSpouse = false; spouseName = ''; spouseGrade = 'C';

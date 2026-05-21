@@ -15,6 +15,10 @@ function buildSaveData() {
         festivalCount, totalHarvestCount,
         harvestTypeSet: [...harvestTypeSet],
         ssMarriageEventFired,
+        encounterCooldown, ancestorBlessing, marketBonus, marketBonusDays,
+        wormBonus, wormBonusDays, frozenWaterDays, droughtDouble, droughtDays,
+        dustDays, hiredWorker, hiredWorkerDays, presaleActive,
+        injuredDays, interestModifier, interestModDays, diceBonus,
         currentSeason, currentWeather,
         totalRevenue, totalExpense, fixedLoanAmount,
         endingFired,
@@ -68,6 +72,23 @@ function applySaveData(d) {
     totalHarvestCount = d.totalHarvestCount ?? 0;
     harvestTypeSet   = new Set(d.harvestTypeSet ?? []);
     ssMarriageEventFired = d.ssMarriageEventFired ?? { beatrice: false, joan: false, scarlet: false };
+    encounterCooldown  = d.encounterCooldown  ?? 0;
+    ancestorBlessing   = d.ancestorBlessing   ?? false;
+    marketBonus        = d.marketBonus        ?? 0;
+    marketBonusDays    = d.marketBonusDays    ?? 0;
+    wormBonus          = d.wormBonus          ?? false;
+    wormBonusDays      = d.wormBonusDays      ?? 0;
+    frozenWaterDays    = d.frozenWaterDays     ?? 0;
+    droughtDouble      = d.droughtDouble      ?? false;
+    droughtDays        = d.droughtDays        ?? 0;
+    dustDays           = d.dustDays           ?? 0;
+    hiredWorker        = d.hiredWorker        ?? false;
+    hiredWorkerDays    = d.hiredWorkerDays    ?? 0;
+    presaleActive      = d.presaleActive      ?? false;
+    injuredDays        = d.injuredDays        ?? 0;
+    interestModifier   = d.interestModifier   ?? 0;
+    interestModDays    = d.interestModDays    ?? 0;
+    diceBonus          = d.diceBonus          ?? 0;
     currentSeason  = d.currentSeason;
     currentWeather = d.currentWeather;
     totalRevenue   = d.totalRevenue;

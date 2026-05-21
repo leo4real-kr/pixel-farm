@@ -55,8 +55,8 @@ function addHarvestLog(cropName, amount) {
 // ── 대출/상환 ────────────────────────────────────────
 function borrowFixedLoan() {
     const debt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-    if (debt + 1000 > LOAN_LIMIT) {
-        alert(`🚨 대출 거부: 총 부채 한도($${LOAN_LIMIT})를 초과했습니다.`);
+    if (debt + 1000 > getLoanLimit()) {
+        alert(`🚨 대출 거부: 총 부채 한도($${getLoanLimit()})를 초과했습니다.`);
         return;
     }
     fixedLoanAmount += 1000;
@@ -94,7 +94,7 @@ function trySpend(amount, desc) {
 
 function trySpendSync(amount, desc) {
     const debt        = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
-    const canLoan     = debt + 1000 <= LOAN_LIMIT && money >= -2000;
+    const canLoan     = debt + 1000 <= getLoanLimit() && money >= -2000;
     const creditBlock = money < -2000;
     const unlockedCount = (() => {
         let cnt = 0;
@@ -349,7 +349,8 @@ function applyInterests() {
     }
 
     if (fixedLoanAmount > 0) {
-        const interest = Math.floor((fixedLoanAmount / 1000) * 50);
+        const baseInterest = Math.floor((fixedLoanAmount / 1000) * 50);
+        const interest = Math.max(0, baseInterest + interestModifier);
         expenseEl.innerText += ` | 🔵 대출이자: -$${interest}`;
         updateFinancials('지출', interest, '은행 신용대출 정기 이자');
     }

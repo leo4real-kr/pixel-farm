@@ -79,6 +79,9 @@ canvas.addEventListener('click', function(event) {
 
     // 농약 살포 (3x3 광역, $80)
     if (currentTool === 'pesticide') {
+        if (injuredDays > 0) {
+            addSysLog('🤕 부상 중 농약 살포 불가!'); return;
+        }
         if (!tile.isUnlocked) return;
         let treated = 0;
         for (let dx = -1; dx <= 1; dx++) {
@@ -99,6 +102,9 @@ canvas.addEventListener('click', function(event) {
 
     // 영토 확장
     if (currentTool === 'expand') {
+        if (injuredDays > 0) {
+            addSysLog('🤕 부상 중 영토 확장 불가!'); return;
+        }
         if (!tile.isUnlocked) {
             const debt = fixedLoanAmount + (money < 0 ? Math.abs(money) : 0);
             if (debt + 100 > getLoanLimit()) {
@@ -300,13 +306,21 @@ function handleHarvest(tile, tileX, tileY, cName) {
     }
     if (tile.progress >= 100) {
         const base  = getCropValue(tile.type);
-        const bonus = sellBonusPct > 0 ? Math.floor(base * sellBonusPct / 100) : 0;
+        const totalPct = sellBonusPct + (marketBonus || 0);
+        const bonus = totalPct > 0 ? Math.floor(base * totalPct / 100) : 0;
         const r     = base + bonus;
+        // 선물거래 중이면 판매 불가
+        if (presaleActive) {
+            addSysLog(`🤝 선물거래 계약 중 — ${getCropName(tile.type)} 판매 불가. 수확만 진행.`);
+            clearTile(tile);
+            totalHarvestCount++;
+            harvestTypeSet.add(tile.type);
+            return '선물거래 계약으로 판매 불가 (수확만 진행)';
+        }
         clearTile(tile);
         playSound('harvest');
-        updateFinancials('수입', r, `${cName} 시장 출하${bonus > 0 ? ` (+${sellBonusPct}% 스칼렛 보너스)` : ''}`);
+        updateFinancials('수입', r, `${cName} 시장 출하${bonus > 0 ? ` (+${totalPct}% 보너스)` : ''}`);
         addHarvestLog(cName, r);
-        // 스칼렛 조건 추적
         totalHarvestCount++;
         harvestTypeSet.add(tile.type);
         return `수확 성공: +$${r}${bonus > 0 ? ` (보너스 +$${bonus})` : ''}`;
