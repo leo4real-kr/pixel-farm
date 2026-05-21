@@ -387,7 +387,12 @@ function doHarvest(tile, source = 'player') {
 
     // 부패 작물 — 그냥 제거 (수익 없음)
     if (tile.isRotten) {
-        const cause = getRottenCauseLabel ? getRottenCauseLabel(tile) : tile.rottenCause;
+        const causeMap = {
+            overripe: '과숙 부패', overwater: '과수분 부패',
+            pest: '병충해 부패', drought: '가뭄 고사',
+            frost: '냉해 동사', lightning: '낙뢰', season: '계절 종료'
+        };
+        const cause = causeMap[tile.rottenCause] || tile.rottenCause || '원인 불명';
         clearTile(tile);
         return { revenue: 0, msg: `🗑️ 부패 작물 제거 완료. 원인: ${cause}` };
     }
@@ -403,21 +408,23 @@ function doHarvest(tile, source = 'player') {
 
         // 선물거래 중 — 1회 수확 판매 불가
         if (presaleActive) {
+            const tileType1 = tile.type;
             clearTile(tile);
             totalHarvestCount++;
-            harvestTypeSet.add(tile.type);
+            harvestTypeSet.add(tileType1);
             clearPresale();
             if (source === 'player') playSound('harvest');
             return { revenue: 0, msg: `🤝 선물거래 계약: ${cropName} 수확만 진행. 판매 불가. (계약 완료)` };
         }
 
+        const tileType2 = tile.type;
         clearTile(tile);
         if (source === 'player') playSound('harvest');
         updateFinancials('수입', revenue,
             `${cropName} 시장 출하${sourceLabel}${bonus > 0 ? ` (+${totalPct}% 보너스)` : ''}`);
         addHarvestLog(`${cropName}${sourceLabel}`, revenue);
         totalHarvestCount++;
-        harvestTypeSet.add(tile.type);
+        harvestTypeSet.add(tileType2);
         return { revenue, msg: `수확 성공: +$${revenue}${bonus > 0 ? ` (보너스 +$${bonus})` : ''}` };
     }
 

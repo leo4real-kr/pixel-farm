@@ -114,7 +114,7 @@ function showEncounterModal(enc, diceResult) {
                     padding:24px 28px;max-width:380px;width:92%;text-align:center;">
             <div style="font-size:24px;margin-bottom:6px;">${enc.emoji}</div>
             <div style="font-size:15px;color:${typeColor};font-weight:bold;margin-bottom:8px;">${enc.title}</div>
-            <div style="font-size:12px;color:#ccc;margin-bottom:12px;line-height:1.6;">${enc.desc}</div>
+            <div style="font-size:12px;color:#ccc;margin-bottom:12px;line-height:1.6;">${enc.desc.replace(/\n/g, '<br>')}</div>
             ${diceHTML}
             <div style="display:flex;flex-wrap:wrap;justify-content:center;margin-top:8px;">${btnHTML}</div>
         </div>
