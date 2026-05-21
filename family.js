@@ -81,17 +81,17 @@ function triggerSSEvent(type) {
 
             if (type === 'beatrice') {
                 spouseName = '베아트리체';
-                money += 15000;
+                updateFinancials('수입', 15000, '베아트리체 혼인 지참금');
                 loanLimitBonus = 5000;
                 resultEl.innerText = `👑 성공! 합계 ${total} — 베아트리체와 결혼! +$15,000, 대출 한도 +$5,000!`;
             } else if (type === 'joan') {
                 spouseName = '조앤';
-                money += 10000;
+                updateFinancials('수입', 10000, '조앤 혼인 지참금');
                 loanLimitBonus = 3000;
                 resultEl.innerText = `🌸 성공! 합계 ${total} — 조앤과 결혼! +$10,000, 대출 한도 +$3,000, 자동 급수/배수!`;
             } else if (type === 'scarlet') {
                 spouseName = '스칼렛';
-                money += 3000;
+                updateFinancials('수입', 3000, '스칼렛 혼인 지참금');
                 loanLimitBonus = 2000;
                 sellBonusPct = 10;
                 resultEl.innerText = `💎 성공! 합계 ${total} — 스칼렛과 결혼! +$3,000, 판매가 영구 +10%, 대출 한도 +$2,000!`;

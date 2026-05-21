@@ -140,11 +140,11 @@ function resolveEncounter(id, choiceIdx, diceTotal) {
         return;
     }
 
-    // 1회성 이벤트 기록
-    if (enc.once) firedOnce.add(enc.id);
-
     // 결과 처리
     const result = choice.resolve(diceTotal);
+
+    // 1회성 이벤트 기록 — resolve 완료 후 세팅 (trySpend 실패 시 소진 방지)
+    if (enc.once && result !== '자금 부족!') firedOnce.add(enc.id);
 
     // 모달 제거
     const modal = document.getElementById('encounter-modal');
@@ -174,6 +174,8 @@ function processEncounterEffects() {
     } else {
         marketBonus = 0; // 혹시 남은 음수 보너스 초기화
     }
+    // marketBonus 상하한 클램프 (-30% ~ +50%)
+    marketBonus = Math.max(-30, Math.min(50, marketBonus));
     // 지렁이 보너스
     if (wormBonusDays > 0) {
         wormBonusDays--;
@@ -529,7 +531,7 @@ const ENCOUNTERS = [
                 resolve: (total) => {
                     if (!trySpend(100, '떠돌이 농부 도움')) return '자금 부족!';
                     if (total >= 10) {
-                        money += 200; updateFinancials('수입', 200, '농부 감사 보답');
+                        updateFinancials('수입', 200, '농부 감사 보답');
                         return `주사위 ${total} — 농부가 크게 보답! +$200`;
                     }
                     if (total >= 7) { marketBonus += 5; marketBonusDays = 10; return `주사위 ${total} — 농부가 씨앗 정보를 알려줬습니다. 판매가 +5% (10일)`; }
@@ -585,7 +587,6 @@ const ENCOUNTERS = [
         choices: [{
             label: '감사합니다',
             resolve: () => {
-                money += 80;
                 updateFinancials('수입', 80, '이웃 농부 씨앗 선물 (현금 환산)');
                 return '씨앗 선물 (현금 $80 환산)';
             }
@@ -633,7 +634,9 @@ const ENCOUNTERS = [
         choices: [{
             label: '납부하기',
             resolve: () => {
-                const tax = Math.max(10, Math.floor(Math.abs(money) * 0.05));
+                const tax = money > 0
+                    ? Math.max(10, Math.floor(money * 0.05))
+                    : 10; // 마이너스 상태면 최소 $10
                 updateFinancials('지출', tax, '관청 세금');
                 return `세금 -$${tax}`;
             }
@@ -662,7 +665,7 @@ const ENCOUNTERS = [
         desc: '고물상이 농장 폐자재를 사겠다고 합니다.\n$80을 받으시겠습니까?',
         choices: [{
             label: '팔기',
-            resolve: () => { money += 80; updateFinancials('수입', 80, '고물 판매'); return '+$80'; }
+            resolve: () => { updateFinancials('수입', 80, '고물 판매'); return '+$80'; }
         }, {
             label: '거절하기', resolve: () => '아무 일 없음.'
         }]
@@ -675,7 +678,7 @@ const ENCOUNTERS = [
             {
                 label: '수락하기', needDice: true, diceCount: 2,
                 resolve: (total) => {
-                    if (total >= 7) { money += 200; updateFinancials('수입', 200, '수상한 거래 성공'); return `주사위 ${total} — 성공! +$200`; }
+                    if (total >= 7) { updateFinancials('수입', 200, '수상한 거래 성공'); return `주사위 ${total} — 성공! +$200`; }
                     updateFinancials('지출', 200, '수상한 거래 실패');
                     return `주사위 ${total} — 사기당했습니다! -$200`;
                 }
@@ -689,7 +692,7 @@ const ENCOUNTERS = [
         desc: '농협에서 보조금이 지급됐습니다!',
         choices: [{
             label: '감사합니다',
-            resolve: () => { money += 150; updateFinancials('수입', 150, '농협 보조금'); return '+$150'; }
+            resolve: () => { updateFinancials('수입', 150, '농협 보조금'); return '+$150'; }
         }]
     },
     {
@@ -742,7 +745,7 @@ const ENCOUNTERS = [
         desc: '은행이 금리를 올렸습니다.\n이번 달 대출 이자가 추가됩니다.',
         choices: [{
             label: '확인',
-            resolve: () => { interestModifier += 30; interestModDays = 30; return '이자 +$30 (30일)'; }
+            resolve: () => { interestModifier = Math.min(90, interestModifier + 30); interestModDays = 30; return '이자 +$30 (30일)'; }
         }]
     },
     {
@@ -752,7 +755,7 @@ const ENCOUNTERS = [
         desc: '은행이 금리를 내렸습니다!\n이번 달 대출 이자가 감면됩니다.',
         choices: [{
             label: '좋아요',
-            resolve: () => { interestModifier -= 20; interestModDays = 30; return '이자 -$20 (30일)'; }
+            resolve: () => { interestModifier = Math.max(-40, interestModifier - 20); interestModDays = 30; return '이자 -$20 (30일)'; }
         }]
     },
     {
@@ -804,7 +807,7 @@ const ENCOUNTERS = [
             label: '확인하기', needDice: true, diceCount: 2,
             resolve: (total) => {
                 const reward = total === 12 ? 1000 : total >= 10 ? 500 : total >= 8 ? 300 : 150;
-                money += reward; updateFinancials('수입', reward, '복권 당첨');
+                updateFinancials('수입', reward, '복권 당첨');
                 return `주사위 ${total} — 당첨금 +$${reward}!`;
             }
         }]
@@ -825,7 +828,7 @@ const ENCOUNTERS = [
         desc: '가입했던 농업 보험금이 지급됐습니다!',
         choices: [{
             label: '감사합니다',
-            resolve: () => { money += 200; updateFinancials('수입', 200, '농업 보험금'); return '+$200'; }
+            resolve: () => { updateFinancials('수입', 200, '농업 보험금'); return '+$200'; }
         }]
     },
 
@@ -937,7 +940,7 @@ const ENCOUNTERS = [
         desc: '오래된 가문 기록을 발견했습니다!\n선조의 지혜로 +$100을 얻었습니다.',
         choices: [{
             label: '감사합니다',
-            resolve: () => { money += 100; updateFinancials('수입', 100, '가문 기록 발견'); return '+$100'; }
+            resolve: () => { updateFinancials('수입', 100, '가문 기록 발견'); return '+$100'; }
         }]
     },
 ];
