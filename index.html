@@ -118,10 +118,11 @@
             <div id="control-board" style="flex:1; min-width:0;">
 
                 <!-- 탭 헤더 -->
-                <div style="display:flex; gap:2px; margin-bottom:4px;">
+                <div style="display:flex; gap:2px; margin-bottom:4px; flex-wrap:wrap;">
                     <button class="tab-btn active" id="tab-basic" onclick="switchTab('basic')">🛠️ 기본</button>
                     <button class="tab-btn" id="tab-shop" onclick="switchTab('shop')">🛒 농장상점</button>
                     <button class="tab-btn" id="tab-log" onclick="switchTab('log')">💬 시스템 알림</button>
+                    <button class="tab-btn" id="tab-wiki" onclick="switchTab('wiki')">📖 농업백과</button>
                 </div>
 
                 <!-- 탭: 기본 -->
@@ -177,6 +178,11 @@
                 <!-- 탭: 시스템 알림 -->
                 <div id="tab-content-log" style="display:none; height:180px; background:#1a1a1a; border:1px solid #444; border-radius:6px; padding:6px; box-sizing:border-box; overflow-y:auto;">
                     <div id="info" style="font-size:11px; color:#aaa; word-break:break-all;"></div>
+                </div>
+
+                <!-- 탭: 농업백과사전 -->
+                <div id="tab-content-wiki" style="display:none;">
+                    <div id="wiki-body"></div>
                 </div>
 
             </div>

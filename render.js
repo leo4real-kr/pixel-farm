@@ -81,10 +81,11 @@ function preloadImages(callback) {
 
 // ── 탭 전환 ──────────────────────────────────────────
 function switchTab(tab) {
-    ['basic', 'shop', 'log'].forEach(t => {
+    ['basic', 'shop', 'log', 'wiki'].forEach(t => {
         document.getElementById(`tab-content-${t}`).style.display = t === tab ? '' : 'none';
         document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
     });
+    if (tab === 'wiki') renderWiki();
 }
 
 // ── 계절 전용 작물 버튼 표시 업데이트 ────────────────
@@ -111,7 +112,124 @@ function updateSeasonalButtons() {
     if (title) title.innerText = `${seasonEmoji[currentSeason] || '🌱'} ${currentSeason} 전용 작물`;
 }
 
-// ── 시스템 알림 로그 ─────────────────────────────────
+// ── 농업백과사전 렌더 ────────────────────────────────
+function renderWiki() {
+    const panel = document.getElementById('wiki-body');
+    if (!panel) return;
+
+    const WIKI_CROPS = [
+        // 사계절
+        { type: 1,  name: '당근',     emoji: '🥕', season: '사계절', cost: 20,  value: 50,  growth: 4,  special: null,           tip: '초반 자금 확보에 좋습니다. 빠르게 수확 가능.' },
+        { type: 2,  name: '감자',     emoji: '🥔', season: '사계절', cost: 30,  value: 80,  growth: 5,  special: null,           tip: '안정적인 수익원. 병충해에 강합니다.' },
+        { type: 3,  name: '옥수수',   emoji: '🌽', season: '사계절', cost: 50,  value: 150, growth: 8,  special: '잡초억제',     tip: '주변 3칸 잡초 발생률 감소. 냉해에 취약.' },
+        { type: 4,  name: '딸기',     emoji: '🍓', season: '사계절', cost: 80,  value: 260, growth: 7,  special: '병충해주의',   tip: '수익이 높지만 병충해 전파 범위가 넓습니다.' },
+        { type: 5,  name: '사과나무', emoji: '🍎', season: '사계절', cost: 300, value: 100, growth: -1, special: '다년생',       tip: '가을에만 수확 가능. 수확 횟수마다 보너스 +$50. 겨울에 벌목 시 $200.' },
+        // 봄
+        { type: 6,  name: '튤립',     emoji: '🌷', season: '봄',     cost: 40,  value: 120, growth: 5,  special: null,           tip: '봄 전용. 이른 봄에 심어야 수확 가능합니다.' },
+        { type: 7,  name: '산딸기',   emoji: '🍓', season: '봄',     cost: 70,  value: 200, growth: 7,  special: null,           tip: '봄 전용. 딸기보다 수익이 높습니다.' },
+        // 여름
+        { type: 8,  name: '해바라기', emoji: '🌻', season: '여름',   cost: 80,  value: 220, growth: 8,  special: '병충해저항',   tip: '병충해 발생률 50% 감소. 여름 폭염에 강합니다.' },
+        { type: 9,  name: '풋콩',     emoji: '🫘', season: '여름',   cost: 60,  value: 160, growth: 6,  special: '잡초저항',     tip: '잡초 발생률을 극도로 낮춥니다. (1%)' },
+        // 가을
+        { type: 10, name: '호박',     emoji: '🎃', season: '가을',   cost: 100, value: 350, growth: 13, special: null,           tip: '가을 최고 수익 작물. 성장이 느리므로 일찍 심으세요.' },
+        { type: 11, name: '고구마',   emoji: '🍠', season: '가을',   cost: 60,  value: 180, growth: 8,  special: '냉해저항',     tip: '냉해 면역. 가을 말에도 안전하게 재배 가능합니다.' },
+    ];
+
+    const seasonColor = { '사계절': '#4ff3a6', '봄': '#ff80ab', '여름': '#ffb74d', '가을': '#ff7043', '겨울': '#90caf9' };
+    const seasonBg    = { '사계절': '#1a2e1a', '봄': '#2e1a2a', '여름': '#2e2a1a', '가을': '#2e1e1a', '겨울': '#1a1e2e' };
+
+    const growthLabel = (g) => g === -1 ? '다년생' : `약 ${Math.ceil(100/g)}일`;
+    const roiLabel    = (cost, value) => `+${value - cost} (+${Math.round((value-cost)/cost*100)}%)`;
+
+    // 카테고리별 그룹
+    const groups = [
+        { label: '🌱 사계절 작물', seasons: ['사계절'] },
+        { label: '🌷 봄 전용',    seasons: ['봄'] },
+        { label: '🌻 여름 전용',  seasons: ['여름'] },
+        { label: '🍂 가을 전용',  seasons: ['가을'] },
+    ];
+
+    panel.innerHTML = `
+        <div style="max-height:300px; overflow-y:auto; padding-right:2px;">
+        ${groups.map(g => {
+            const crops = WIKI_CROPS.filter(c => g.seasons.includes(c.season));
+            return `
+            <div style="margin-bottom:8px;">
+                <div style="font-size:11px; color:#888; font-weight:bold;
+                            margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">
+                    ${g.label}
+                </div>
+                ${crops.map(c => `
+                <div style="background:${seasonBg[c.season] || '#1a1a1a'};
+                            border:1px solid #333; border-radius:6px;
+                            padding:7px 9px; margin-bottom:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:13px; font-weight:bold;">
+                            ${c.emoji} ${c.name}
+                        </span>
+                        <span style="font-size:10px; color:${seasonColor[c.season]};
+                                     background:rgba(0,0,0,0.3); padding:1px 6px; border-radius:3px;">
+                            ${c.season}
+                        </span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; font-size:10px; color:#aaa; margin-bottom:4px;">
+                        <span>💰 구매: <b style="color:#ffb74d;">$${c.cost}</b></span>
+                        <span>📦 판매: <b style="color:#4ff3a6;">$${c.value}</b></span>
+                        <span>📈 수익률: <b style="color:#81c784;">${roiLabel(c.cost, c.value)}</b></span>
+                        <span>⏱️ 성장: <b style="color:#ccc;">${growthLabel(c.growth)}</b></span>
+                        <span>🌿 특성: <b style="color:#ffcc80;">${c.special || '없음'}</b></span>
+                    </div>
+                    <div style="font-size:10px; color:#666; font-style:italic;">
+                        💡 ${c.tip}
+                    </div>
+                </div>`).join('')}
+            </div>`;
+        }).join('')}
+
+        <div style="margin-bottom:8px;">
+            <div style="font-size:11px; color:#888; font-weight:bold;
+                        margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">
+                ⚠️ 작물 주의사항
+            </div>
+            <div style="background:#1a1a1a; border:1px solid #333; border-radius:6px; padding:8px 10px; font-size:10px; color:#aaa; line-height:1.8;">
+                🌧️ <b style="color:#64b5f6;">과수분</b> — 수분 100% 상태 3일 지속 시 부패<br>
+                ☀️ <b style="color:#ff7043;">가뭄</b> — 수분 0% 상태 3일 지속 시 고사<br>
+                🐛 <b style="color:#ff9800;">병충해</b> — 감염 3일 후 부패 + 주변 전파<br>
+                🌾 <b style="color:#a5d66a;">과숙</b> — 수확기 3일 방치 시 부패<br>
+                ❄️ <b style="color:#90caf9;">냉해</b> — 봄/가을 냉해 날씨 시 딸기·옥수수 즉사<br>
+                🍂 <b style="color:#ffb74d;">계절 종료</b> — 계절 전용 작물은 계절이 바뀌면 강제 폐기
+            </div>
+        </div>
+
+        <div style="margin-bottom:8px;">
+            <div style="font-size:11px; color:#888; font-weight:bold;
+                        margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">
+                💍 결혼 & 가문
+            </div>
+            <div style="background:#1a1a1a; border:1px solid #333; border-radius:6px; padding:8px 10px; font-size:10px; color:#aaa; line-height:1.8;">
+                💑 <b style="color:#f48fb1;">결혼</b> — 잔고 $3,000 + 개간 20칸 이상 시 이벤트 발생<br>
+                👶 <b style="color:#80cbc4;">출산</b> — 결혼 후 주사위 8 이상 시 임신. 출산까지 10틱<br>
+                🚜 <b style="color:#a5d66a;">승계</b> — 자녀가 청년(31일)이 되면 승계 가능<br>
+                👑 <b style="color:#ffb74d;">SS급 배우자</b> — 특수 조건 달성 시 운명적 만남 이벤트 발생
+            </div>
+        </div>
+
+        <div style="margin-bottom:8px;">
+            <div style="font-size:11px; color:#888; font-weight:bold;
+                        margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">
+                🏆 엔딩 조건 (힌트)
+            </div>
+            <div style="background:#1a1a1a; border:1px solid #333; border-radius:6px; padding:8px 10px; font-size:10px; color:#aaa; line-height:1.8;">
+                💰 <b style="color:#ffb74d;">억만장자</b> — 무부채 상태에서 큰 돈을 모으면...<br>
+                🌾 <b style="color:#a5d66a;">대지주</b> — 이 땅 전부를 개간하고 오래 버티면...<br>
+                👨‍👩‍👧 <b style="color:#80cbc4;">명문가</b> — 3대가 이 땅을 지키면...<br>
+                👑 <b style="color:#ffcc80;">그 이상</b> — 마을에 소문이 돌고 있습니다...
+            </div>
+        </div>
+
+        </div>
+    `;
+}
 const SYS_LOG_MAX = 6;
 let sysLog = [];
 
