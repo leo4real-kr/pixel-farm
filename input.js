@@ -201,28 +201,8 @@ canvas.addEventListener('click', function(event) {
                     if (t.hasWeed) { t.hasWeed = false; affected++; }
                 } else if (currentTool === 'harvestArea') {
                     if (t.type > 0 && t.type !== 5) {
-                        if (t.isRotten) { clearTile(t); affected++; }
-                        else if (t.progress >= 100) {
-                            if (presaleActive) {
-                                clearTile(t);
-                                totalHarvestCount++;
-                                harvestTypeSet.add(t.type);
-                                clearPresale();
-                                affected++;
-                            } else {
-                                const base = getCropValue(t.type);
-                                const totalPct = sellBonusPct + (marketBonus || 0);
-                                const bonus = totalPct > 0 ? Math.floor(base * totalPct / 100) : 0;
-                                const r = base + bonus;
-                                const n = getCropName(t.type);
-                                clearTile(t);
-                                updateFinancials('수입', r, `${n} 광역 수확${bonus > 0 ? ` (+${totalPct}%)` : ''}`);
-                                addHarvestLog(`${n}(광역)`, r);
-                                totalHarvestCount++;
-                                harvestTypeSet.add(t.type);
-                                affected++;
-                            }
-                        }
+                        const result = doHarvest(t, 'area');
+                        if (result !== null) affected++;
                     }
                 } else if (currentTool === 'pesticideArea') {
                     if (t.hasPest) { t.hasPest = false; t.pestDays = 0; affected++; }
@@ -290,56 +270,12 @@ canvas.addEventListener('click', function(event) {
 });
 
 function handleHarvest(tile, tileX, tileY, cName) {
-    if (tile.type === 5) {
-        // 사과나무 — 겨울에만 벌목 가능 (절대 부패하지 않음)
-        if (currentSeason === '겨울') {
-            clearTile(tile); tile.treeHarvestCount = 0;
-            playSound('weed');
-            updateFinancials('수입', 200, '겨울 땔감 벌목 판매');
-            return '나무를 벌목하여 땔감 자금 $200을 획득했습니다.';
-        }
-        if (currentSeason === '가을' && tile.progress >= 100) {
-            tile.treeHarvestCount++;
-            const reward = 100 + (tile.treeHarvestCount - 1) * 50;
-            playSound('harvest');
-            updateFinancials('수입', reward, `가을 사과 누적 보너스 수확 (${tile.treeHarvestCount}회차)`);
-            addHarvestLog(`사과나무(${tile.treeHarvestCount}회차)`, reward);
-            tile.progress = 0;
-            tile.treeHarvested = true; // _6 수확 후 이미지 표시용
-            return `사과를 수확하여 $${reward}을 획득했습니다! (나무 숙련도 상승)`;
-        }
-        return '아직 사과가 열리지 않았습니다. (가을에 수확 가능)';
+    const result = doHarvest(tile, 'player');
+    if (result === null) {
+        if (tile.type === 5) return '아직 사과가 열리지 않았습니다. (가을에 수확 가능)';
+        return null;
     }
-
-    // 일반 작물
-    if (tile.isRotten) {
-        const cause = getRottenCauseLabel(tile);
-        clearTile(tile);
-        return `🗑️ 부패 작물 제거 완료. 원인: ${cause}`;
-    }
-    if (tile.progress >= 100) {
-        const base  = getCropValue(tile.type);
-        const totalPct = sellBonusPct + (marketBonus || 0);
-        const bonus = totalPct > 0 ? Math.floor(base * totalPct / 100) : 0;
-        const r     = base + bonus;
-        // 선물거래 중이면 판매 불가
-        if (presaleActive) {
-            addSysLog(`🤝 선물거래 계약 중 — ${getCropName(tile.type)} 판매 불가. 수확만 진행.`);
-            clearTile(tile);
-            totalHarvestCount++;
-            harvestTypeSet.add(tile.type);
-            clearPresale(); // 1회 수확 후 선물거래 해제
-            return '선물거래 계약으로 판매 불가 (수확만 진행, 계약 완료)';
-        }
-        clearTile(tile);
-        playSound('harvest');
-        updateFinancials('수입', r, `${cName} 시장 출하${bonus > 0 ? ` (+${totalPct}% 보너스)` : ''}`);
-        addHarvestLog(cName, r);
-        totalHarvestCount++;
-        harvestTypeSet.add(tile.type);
-        return `수확 성공: +$${r}${bonus > 0 ? ` (보너스 +$${bonus})` : ''}`;
-    }
-    return null;
+    return result.msg;
 }
 
 // ── 농장 상점 렌더 ───────────────────────────────────

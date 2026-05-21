@@ -355,3 +355,71 @@ function applyInterests() {
         updateFinancials('지출', interest, '은행 신용대출 정기 이자');
     }
 }
+
+// ── 통합 수확 처리 함수 ───────────────────────────────
+// 모든 수확 경로(일반/광역/배우자/자녀)가 이 함수를 사용
+// source: 'player' | 'area' | 'spouse' | 'child'
+// 반환값: { revenue, msg } 또는 null (수확 불가)
+function doHarvest(tile, source = 'player') {
+    if (!tile || tile.type === 0) return null;
+
+    // 사과나무 — 경로별 처리 다름 (플레이어만 수확 가능)
+    if (tile.type === 5) {
+        if (source !== 'player') return null;
+        if (currentSeason === '겨울') {
+            clearTile(tile); tile.treeHarvestCount = 0;
+            playSound('weed');
+            updateFinancials('수입', 200, '겨울 땔감 벌목 판매');
+            return { revenue: 200, msg: '나무를 벌목하여 땔감 자금 $200을 획득했습니다.' };
+        }
+        if (currentSeason === '가을' && tile.progress >= 100) {
+            tile.treeHarvestCount++;
+            const reward = 100 + (tile.treeHarvestCount - 1) * 50;
+            playSound('harvest');
+            updateFinancials('수입', reward, `가을 사과 수확 (${tile.treeHarvestCount}회차)`);
+            addHarvestLog(`사과나무(${tile.treeHarvestCount}회차)`, reward);
+            tile.progress = 0;
+            tile.treeHarvested = true;
+            return { revenue: reward, msg: `사과를 수확하여 $${reward}을 획득했습니다! (나무 숙련도 상승)` };
+        }
+        return null;
+    }
+
+    // 부패 작물 — 그냥 제거 (수익 없음)
+    if (tile.isRotten) {
+        const cause = getRottenCauseLabel ? getRottenCauseLabel(tile) : tile.rottenCause;
+        clearTile(tile);
+        return { revenue: 0, msg: `🗑️ 부패 작물 제거 완료. 원인: ${cause}` };
+    }
+
+    // 수확 가능 상태
+    if (tile.progress >= 100) {
+        const cropName = getCropName(tile.type);
+        const base     = getCropValue(tile.type);
+        const totalPct = sellBonusPct + (marketBonus || 0);
+        const bonus    = totalPct > 0 ? Math.floor(base * totalPct / 100) : 0;
+        const revenue  = base + bonus;
+        const sourceLabel = source === 'player' ? '' : source === 'area' ? '(광역)' : source === 'spouse' ? '(배우자)' : '(자녀)';
+
+        // 선물거래 중 — 1회 수확 판매 불가
+        if (presaleActive) {
+            clearTile(tile);
+            totalHarvestCount++;
+            harvestTypeSet.add(tile.type);
+            clearPresale();
+            if (source === 'player') playSound('harvest');
+            return { revenue: 0, msg: `🤝 선물거래 계약: ${cropName} 수확만 진행. 판매 불가. (계약 완료)` };
+        }
+
+        clearTile(tile);
+        if (source === 'player') playSound('harvest');
+        updateFinancials('수입', revenue,
+            `${cropName} 시장 출하${sourceLabel}${bonus > 0 ? ` (+${totalPct}% 보너스)` : ''}`);
+        addHarvestLog(`${cropName}${sourceLabel}`, revenue);
+        totalHarvestCount++;
+        harvestTypeSet.add(tile.type);
+        return { revenue, msg: `수확 성공: +$${revenue}${bonus > 0 ? ` (보너스 +$${bonus})` : ''}` };
+    }
+
+    return null;
+}

@@ -400,17 +400,8 @@ function runFamilyActions(dryTiles, weedTiles, ripeTiles, rottenTiles) {
                     if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) continue;
                     const t = farmGrid[nx][ny];
                     if (t.isUnlocked && t.type > 0 && t.type !== 5 && t.progress >= 100 && !t.isRotten) {
-                        const base = getCropValue(t.type);
-                        const totalPct = sellBonusPct + (marketBonus || 0);
-                        const bonus = totalPct > 0 ? Math.floor(base * totalPct / 100) : 0;
-                        const r = base + bonus;
-                        const n = getCropName(t.type);
-                        clearTile(t);
-                        updateFinancials('수입', r, `부인 ${spouseName} 3x3 광역 수확`);
-                        addHarvestLog(`${n}(광역)`, r);
-                        totalHarvestCount++;
-                        harvestTypeSet.add(t.type);
-                        harvested++;
+                        const result = doHarvest(t, 'spouse');
+                        if (result) harvested++;
                     }
                 }
             }
@@ -422,16 +413,7 @@ function runFamilyActions(dryTiles, weedTiles, ripeTiles, rottenTiles) {
         if (roll < 0.25 && ripeTiles.length > 0) {
             spouseActionText = `🧺 시장 출하 중 [${spouseGrade}급 ×${harvestLimit}]`;
             ripeTiles.slice(0, harvestLimit).forEach(item => {
-                const base = getCropValue(item.tile.type);
-                const totalPct = sellBonusPct + (marketBonus || 0);
-                const bonus = totalPct > 0 ? Math.floor(base * totalPct / 100) : 0;
-                const r = base + bonus;
-                const n = getCropName(item.tile.type);
-                clearTile(item.tile);
-                updateFinancials('수입', r, `부인 ${spouseName}이(가) ${n} 출하`);
-                addHarvestLog(`${n}(자동)`, r);
-                totalHarvestCount++;
-                harvestTypeSet.add(item.tile.type);
+                doHarvest(item.tile, 'spouse');
             });
         } else if (roll < 0.5 && weedTiles.length > 0) {
             spouseActionText = `✂️ 잡초 제거 중 [${spouseGrade}급]`;
