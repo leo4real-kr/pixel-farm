@@ -58,11 +58,13 @@ function applyFrost(tile) {
     // 고구마(11)는 냉해 면역
     const crop = SEASONAL_CROPS[tile.type];
     if (crop && crop.special === 'frostResist') return;
+    // 딸기(4), 옥수수(3) — 냉해에 취약, 즉시 동사
     if (tile.type === 4 || tile.type === 3) {
         tile.isRotten = true;
-        tile.rottenCause = 'frost'; // 냉해 동사
+        tile.rottenCause = 'frost';
     } else {
-        tile.progress = Math.max(0, tile.progress - 10); // 당근/감자 둔화
+        // 당근(1), 감자(2) 등 — 성장 둔화
+        tile.progress = Math.max(0, tile.progress - 10);
     }
 }
 
@@ -149,7 +151,11 @@ function applyGrowth(tile) {
             return;
         }
         tile.droughtDays = 0;
-        if (tile.rottenCause === 'drought') tile.rottenCause = '';
+        // 가뭄 원인이 아닌 다른 부패는 건드리지 않음
+        if (tile.rottenCause === 'drought') {
+            // 가뭄으로 부패된 경우 — 수분 회복해도 이미 부패 상태 유지
+            // (rottenCause만 남기고 isRotten 유지)
+        }
         if (tile.hasPest) return;
 
         let growth;

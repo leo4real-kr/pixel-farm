@@ -203,12 +203,25 @@ canvas.addEventListener('click', function(event) {
                     if (t.type > 0 && t.type !== 5) {
                         if (t.isRotten) { clearTile(t); affected++; }
                         else if (t.progress >= 100) {
-                            const r = getCropValue(t.type);
-                            const n = getCropName(t.type);
-                            clearTile(t);
-                            updateFinancials('수입', r, `${n} 광역 수확`);
-                            addHarvestLog(`${n}(광역)`, r);
-                            affected++;
+                            if (presaleActive) {
+                                clearTile(t);
+                                totalHarvestCount++;
+                                harvestTypeSet.add(t.type);
+                                clearPresale();
+                                affected++;
+                            } else {
+                                const base = getCropValue(t.type);
+                                const totalPct = sellBonusPct + (marketBonus || 0);
+                                const bonus = totalPct > 0 ? Math.floor(base * totalPct / 100) : 0;
+                                const r = base + bonus;
+                                const n = getCropName(t.type);
+                                clearTile(t);
+                                updateFinancials('수입', r, `${n} 광역 수확${bonus > 0 ? ` (+${totalPct}%)` : ''}`);
+                                addHarvestLog(`${n}(광역)`, r);
+                                totalHarvestCount++;
+                                harvestTypeSet.add(t.type);
+                                affected++;
+                            }
                         }
                     }
                 } else if (currentTool === 'pesticideArea') {
